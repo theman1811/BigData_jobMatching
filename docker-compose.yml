@@ -1,0 +1,639 @@
+version: '3.8'
+
+# ============================================
+# Big Data Platform - Docker Compose
+# Mode: Développement Local + Cloud BigQuery
+# Architecture Modernisée:
+#   - Kafka KRaft (sans Zookeeper)
+#   - MinIO (Data Lake S3-compatible)
+#   - Apache Superset (BI)
+#   - Couche de scraping intégrée
+# ============================================
+
+services:
+  # ==========================================
+  # KAFKA BROKER - Streaming Platform (KRaft Mode)
+  # Plus besoin de Zookeeper! 🎉
+  # ==========================================
+  kafka:
+    image: confluentinc/cp-kafka:7.5.0
+    container_name: bigdata_kafka
+    hostname: kafka
+    ports:
+      - "9092:9092"
+      - "9093:9093"
+    environment:
+      # KRaft Mode Configuration
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: 'broker,controller'
+      KAFKA_CONTROLLER_QUORUM_VOTERS: '1@kafka:29093'
+      KAFKA_CONTROLLER_LISTENER_NAMES: 'CONTROLLER'
+      
+      # Listeners configuration
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT,CONTROLLER:PLAINTEXT
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:29092,PLAINTEXT_HOST://localhost:9092
+      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:29092,PLAINTEXT_HOST://0.0.0.0:9092,CONTROLLER://0.0.0.0:29093
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      
+      # Cluster configuration
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+      
+      # Auto-création des topics
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: 'true'
+      KAFKA_DELETE_TOPIC_ENABLE: 'true'
+      
+      # Log configuration
+      KAFKA_LOG_DIRS: '/var/lib/kafka/data'
+      CLUSTER_ID: 'MkU3OEVBNTcwNTJENDM2Qk'
+      
+      # JMX pour monitoring
+      KAFKA_JMX_PORT: 9093
+      KAFKA_JMX_HOSTNAME: localhost
+    volumes:
+      - kafka_data:/var/lib/kafka/data
+    networks:
+      - bigdata_network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "kafka-broker-api-versions", "--bootstrap-server", "localhost:9092"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    command: >
+      bash -c "
+        # Format log directories (only on first start)
+        if [ ! -f /var/lib/kafka/data/.cluster_id ]; then
+          kafka-storage format -t $${CLUSTER_ID} -c /etc/kafka/kafka.properties || true
+          touch /var/lib/kafka/data/.cluster_id
+        fi
+        # Start Kafka
+        /etc/confluent/docker/run
+      "
+
+  # ==========================================
+  # SCHEMA REGISTRY - Gestion des schémas Kafka
+  # ==========================================
+  schema-registry:
+    image: confluentinc/cp-schema-registry:7.5.0
+    container_name: bigdata_schema_registry
+    hostname: schema-registry
+    depends_on:
+      kafka:
+        condition: service_healthy
+    ports:
+      - "8081:8081"
+    environment:
+      SCHEMA_REGISTRY_HOST_NAME: schema-registry
+      SCHEMA_REGISTRY_KAFKASTORE_BOOTSTRAP_SERVERS: 'kafka:29092'
+      SCHEMA_REGISTRY_LISTENERS: http://0.0.0.0:8081
+    networks:
+      - bigdata_network
+    restart: unless-stopped
+
+  # ==========================================
+  # KAFKA UI - Interface Web pour Kafka
+  # ==========================================
+  kafka-ui:
+    image: provectuslabs/kafka-ui:latest
+    container_name: bigdata_kafka_ui
+    depends_on:
+      kafka:
+        condition: service_healthy
+      schema-registry:
+        condition: service_started
+    ports:
+      - "8080:8080"
+    environment:
+      KAFKA_CLUSTERS_0_NAME: bigdata_cluster
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:29092
+      KAFKA_CLUSTERS_0_SCHEMAREGISTRY: http://schema-registry:8081
+      DYNAMIC_CONFIG_ENABLED: 'true'
+    networks:
+      - bigdata_network
+    restart: unless-stopped
+
+  # ==========================================
+  # MINIO - Data Lake (S3-Compatible)
+  # ==========================================
+  minio:
+    image: minio/minio:latest
+    container_name: bigdata_minio
+    hostname: minio
+    ports:
+      - "9000:9000"      # API
+      - "9001:9001"      # Console Web
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin123
+      MINIO_BROWSER_REDIRECT_URL: http://localhost:9001
+    volumes:
+      - minio_data:/data
+    networks:
+      - bigdata_network
+    restart: unless-stopped
+    command: server /data --console-address ":9001"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # ==========================================
+  # MINIO CLIENT - Initialisation des buckets
+  # ==========================================
+  minio-init:
+    image: minio/mc:latest
+    container_name: bigdata_minio_init
+    depends_on:
+      minio:
+        condition: service_healthy
+    networks:
+      - bigdata_network
+    entrypoint: >
+      /bin/sh -c "
+      sleep 5;
+      mc alias set myminio http://minio:9000 minioadmin minioadmin123;
+      mc mb myminio/datalake --ignore-existing;
+      mc mb myminio/raw-data --ignore-existing;
+      mc mb myminio/processed-data --ignore-existing;
+      mc mb myminio/scraped-jobs --ignore-existing;
+      mc mb myminio/scraped-cvs --ignore-existing;
+      mc mb myminio/backups --ignore-existing;
+      mc policy set download myminio/datalake;
+      echo 'MinIO buckets créés avec succès!';
+      exit 0;
+      "
+
+  # ==========================================
+  # SPARK MASTER - Cluster Manager
+  # ==========================================
+  spark-master:
+    image: bitnami/spark:3.5.0
+    container_name: bigdata_spark_master
+    hostname: spark-master
+    ports:
+      - "7077:7077"    # Spark Master port
+      - "8082:8080"    # Spark Master Web UI
+    environment:
+      - SPARK_MODE=master
+      - SPARK_RPC_AUTHENTICATION_ENABLED=no
+      - SPARK_RPC_ENCRYPTION_ENABLED=no
+      - SPARK_LOCAL_STORAGE_ENCRYPTION_ENABLED=no
+      - SPARK_SSL_ENABLED=no
+      - SPARK_MASTER_WEBUI_PORT=8080
+      # Configuration MinIO/S3
+      - AWS_ACCESS_KEY_ID=minioadmin
+      - AWS_SECRET_ACCESS_KEY=minioadmin123
+      - AWS_REGION=us-east-1
+    volumes:
+      - ./spark:/opt/spark-apps
+      - ./data:/opt/spark-data
+      - ./config/spark-defaults.conf:/opt/bitnami/spark/conf/spark-defaults.conf:ro
+      - spark_master_data:/opt/bitnami/spark
+    networks:
+      - bigdata_network
+    restart: unless-stopped
+
+  # ==========================================
+  # SPARK WORKER 1 - Worker Node
+  # ==========================================
+  spark-worker-1:
+    image: bitnami/spark:3.5.0
+    container_name: bigdata_spark_worker_1
+    hostname: spark-worker-1
+    depends_on:
+      - spark-master
+    ports:
+      - "8083:8081"    # Spark Worker Web UI
+    environment:
+      - SPARK_MODE=worker
+      - SPARK_MASTER_URL=spark://spark-master:7077
+      - SPARK_WORKER_MEMORY=2G
+      - SPARK_WORKER_CORES=2
+      - SPARK_RPC_AUTHENTICATION_ENABLED=no
+      - SPARK_RPC_ENCRYPTION_ENABLED=no
+      - SPARK_LOCAL_STORAGE_ENCRYPTION_ENABLED=no
+      - SPARK_SSL_ENABLED=no
+      - SPARK_WORKER_WEBUI_PORT=8081
+      # Configuration MinIO/S3
+      - AWS_ACCESS_KEY_ID=minioadmin
+      - AWS_SECRET_ACCESS_KEY=minioadmin123
+      - AWS_REGION=us-east-1
+    volumes:
+      - ./spark:/opt/spark-apps
+      - ./data:/opt/spark-data
+      - ./config/spark-defaults.conf:/opt/bitnami/spark/conf/spark-defaults.conf:ro
+      - spark_worker_1_data:/opt/bitnami/spark
+    networks:
+      - bigdata_network
+    restart: unless-stopped
+
+  # ==========================================
+  # SPARK WORKER 2 - Worker Node
+  # ==========================================
+  spark-worker-2:
+    image: bitnami/spark:3.5.0
+    container_name: bigdata_spark_worker_2
+    hostname: spark-worker-2
+    depends_on:
+      - spark-master
+    ports:
+      - "8084:8081"    # Spark Worker Web UI
+    environment:
+      - SPARK_MODE=worker
+      - SPARK_MASTER_URL=spark://spark-master:7077
+      - SPARK_WORKER_MEMORY=2G
+      - SPARK_WORKER_CORES=2
+      - SPARK_RPC_AUTHENTICATION_ENABLED=no
+      - SPARK_RPC_ENCRYPTION_ENABLED=no
+      - SPARK_LOCAL_STORAGE_ENCRYPTION_ENABLED=no
+      - SPARK_SSL_ENABLED=no
+      - SPARK_WORKER_WEBUI_PORT=8081
+      # Configuration MinIO/S3
+      - AWS_ACCESS_KEY_ID=minioadmin
+      - AWS_SECRET_ACCESS_KEY=minioadmin123
+      - AWS_REGION=us-east-1
+    volumes:
+      - ./spark:/opt/spark-apps
+      - ./data:/opt/spark-data
+      - ./config/spark-defaults.conf:/opt/bitnami/spark/conf/spark-defaults.conf:ro
+      - spark_worker_2_data:/opt/bitnami/spark
+    networks:
+      - bigdata_network
+    restart: unless-stopped
+
+  # ==========================================
+  # POSTGRESQL - Base de données (Airflow + Superset)
+  # ==========================================
+  postgres:
+    image: postgres:15
+    container_name: bigdata_postgres
+    hostname: postgres
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: airflow
+      POSTGRES_PASSWORD: airflow
+      POSTGRES_DB: airflow
+      POSTGRES_MULTIPLE_DATABASES: airflow,superset
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./docker/postgres/init-multiple-databases.sh:/docker-entrypoint-initdb.d/init-multiple-databases.sh
+    networks:
+      - bigdata_network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "airflow"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ==========================================
+  # REDIS - Cache pour Airflow & Superset
+  # ==========================================
+  redis:
+    image: redis:7-alpine
+    container_name: bigdata_redis
+    hostname: redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - bigdata_network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+
+  # ==========================================
+  # AIRFLOW WEBSERVER - Interface Web
+  # ==========================================
+  airflow-webserver:
+    image: apache/airflow:2.8.0-python3.11
+    container_name: bigdata_airflow_webserver
+    hostname: airflow-webserver
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      airflow-init:
+        condition: service_completed_successfully
+    ports:
+      - "8085:8080"    # Airflow Web UI
+    environment:
+      AIRFLOW__CORE__EXECUTOR: LocalExecutor
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@postgres/airflow
+      AIRFLOW__CORE__FERNET_KEY: 'FB0o_zt4e3Ziq3LdUUO7F2Z95cvFFx16hU8jTeR1ASM='
+      AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION: 'true'
+      AIRFLOW__CORE__LOAD_EXAMPLES: 'false'
+      AIRFLOW__API__AUTH_BACKENDS: 'airflow.api.auth.backend.basic_auth'
+      AIRFLOW__WEBSERVER__EXPOSE_CONFIG: 'true'
+      # MinIO/S3 Configuration
+      AWS_ACCESS_KEY_ID: minioadmin
+      AWS_SECRET_ACCESS_KEY: minioadmin123
+      AWS_DEFAULT_REGION: us-east-1
+      MINIO_ENDPOINT: http://minio:9000
+    volumes:
+      - ./airflow/dags:/opt/airflow/dags
+      - ./airflow/plugins:/opt/airflow/plugins
+      - ./airflow/logs:/opt/airflow/logs
+      - ./data:/opt/airflow/data
+      - ./spark:/opt/airflow/spark
+      - ./kafka:/opt/airflow/kafka
+    networks:
+      - bigdata_network
+    restart: unless-stopped
+    command: webserver
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  # ==========================================
+  # AIRFLOW SCHEDULER - Ordonnanceur
+  # ==========================================
+  airflow-scheduler:
+    image: apache/airflow:2.8.0-python3.11
+    container_name: bigdata_airflow_scheduler
+    hostname: airflow-scheduler
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      airflow-init:
+        condition: service_completed_successfully
+    environment:
+      AIRFLOW__CORE__EXECUTOR: LocalExecutor
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@postgres/airflow
+      AIRFLOW__CORE__FERNET_KEY: 'FB0o_zt4e3Ziq3LdUUO7F2Z95cvFFx16hU8jTeR1ASM='
+      AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION: 'true'
+      AIRFLOW__CORE__LOAD_EXAMPLES: 'false'
+      AIRFLOW__API__AUTH_BACKENDS: 'airflow.api.auth.backend.basic_auth'
+      # MinIO/S3 Configuration
+      AWS_ACCESS_KEY_ID: minioadmin
+      AWS_SECRET_ACCESS_KEY: minioadmin123
+      AWS_DEFAULT_REGION: us-east-1
+      MINIO_ENDPOINT: http://minio:9000
+    volumes:
+      - ./airflow/dags:/opt/airflow/dags
+      - ./airflow/plugins:/opt/airflow/plugins
+      - ./airflow/logs:/opt/airflow/logs
+      - ./data:/opt/airflow/data
+      - ./spark:/opt/airflow/spark
+      - ./kafka:/opt/airflow/kafka
+    networks:
+      - bigdata_network
+    restart: unless-stopped
+    command: scheduler
+    healthcheck:
+      test: ["CMD-SHELL", "airflow jobs check --job-type SchedulerJob --hostname \"$${HOSTNAME}\""]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  # ==========================================
+  # AIRFLOW INIT - Initialisation
+  # ==========================================
+  airflow-init:
+    image: apache/airflow:2.8.0-python3.11
+    container_name: bigdata_airflow_init
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      AIRFLOW__CORE__EXECUTOR: LocalExecutor
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@postgres/airflow
+      AIRFLOW__CORE__FERNET_KEY: 'FB0o_zt4e3Ziq3LdUUO7F2Z95cvFFx16hU8jTeR1ASM='
+      _AIRFLOW_DB_MIGRATE: 'true'
+      _AIRFLOW_WWW_USER_CREATE: 'true'
+      _AIRFLOW_WWW_USER_USERNAME: airflow
+      _AIRFLOW_WWW_USER_PASSWORD: airflow
+    volumes:
+      - ./airflow/dags:/opt/airflow/dags
+      - ./airflow/plugins:/opt/airflow/plugins
+      - ./airflow/logs:/opt/airflow/logs
+    networks:
+      - bigdata_network
+    entrypoint: /bin/bash
+    command:
+      - -c
+      - |
+        mkdir -p /opt/airflow/logs /opt/airflow/dags /opt/airflow/plugins
+        airflow db migrate
+        airflow users create \
+          --username airflow \
+          --firstname Admin \
+          --lastname User \
+          --role Admin \
+          --email admin@example.com \
+          --password airflow || true
+
+  # ==========================================
+  # APACHE SUPERSET - BI Platform
+  # ==========================================
+  superset:
+    image: apache/superset:latest
+    container_name: bigdata_superset
+    hostname: superset
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      superset-init:
+        condition: service_completed_successfully
+    ports:
+      - "8088:8088"    # Superset Web UI
+    environment:
+      SUPERSET_SECRET_KEY: 'thisISaSECRET_1234567890'
+      DATABASE_DB: superset
+      DATABASE_HOST: postgres
+      DATABASE_PASSWORD: airflow
+      DATABASE_USER: airflow
+      DATABASE_PORT: 5432
+      DATABASE_DIALECT: postgresql
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      SUPERSET_LOAD_EXAMPLES: 'no'
+    volumes:
+      - superset_home:/app/superset_home
+      - ./config/superset_config.py:/app/pythonpath/superset_config.py
+    networks:
+      - bigdata_network
+    restart: unless-stopped
+    command: >
+      bash -c "
+        superset run -h 0.0.0.0 -p 8088 --with-threads --reload --debugger
+      "
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8088/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # ==========================================
+  # SUPERSET INIT - Initialisation
+  # ==========================================
+  superset-init:
+    image: apache/superset:latest
+    container_name: bigdata_superset_init
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      SUPERSET_SECRET_KEY: 'thisISaSECRET_1234567890'
+      DATABASE_DB: superset
+      DATABASE_HOST: postgres
+      DATABASE_PASSWORD: airflow
+      DATABASE_USER: airflow
+      DATABASE_PORT: 5432
+      DATABASE_DIALECT: postgresql
+    volumes:
+      - superset_home:/app/superset_home
+    networks:
+      - bigdata_network
+    command: >
+      bash -c "
+        superset db upgrade &&
+        superset fab create-admin \
+          --username admin \
+          --firstname Admin \
+          --lastname User \
+          --email admin@superset.com \
+          --password admin || true &&
+        superset init
+      "
+
+  # ==========================================
+  # WEB SCRAPERS - Couche de scraping
+  # ==========================================
+  scrapers:
+    build:
+      context: ./docker/scrapers
+      dockerfile: Dockerfile
+    container_name: bigdata_scrapers
+    hostname: scrapers
+    depends_on:
+      kafka:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+    environment:
+      # Kafka Configuration
+      KAFKA_BOOTSTRAP_SERVERS: kafka:29092
+      KAFKA_SCHEMA_REGISTRY_URL: http://schema-registry:8081
+      
+      # MinIO Configuration
+      MINIO_ENDPOINT: http://minio:9000
+      MINIO_ACCESS_KEY: minioadmin
+      MINIO_SECRET_KEY: minioadmin123
+      MINIO_BUCKET_JOBS: scraped-jobs
+      MINIO_BUCKET_CVS: scraped-cvs
+      
+      # Scraping Configuration
+      SCRAPING_DELAY_MIN: 2
+      SCRAPING_DELAY_MAX: 5
+      USER_AGENT_ROTATE: 'true'
+      USE_PROXY: 'false'
+      
+      # Topics Kafka
+      KAFKA_TOPIC_JOBS_RAW: job-offers-raw
+      KAFKA_TOPIC_CVS_RAW: cvs-raw
+      KAFKA_TOPIC_SCRAPING_ERRORS: scraping-errors
+    volumes:
+      - ./kafka/producers:/app/producers
+      - ./data/scraped:/app/data
+      - ./config/scrapers:/app/config
+    networks:
+      - bigdata_network
+    restart: unless-stopped
+    # Le scraper tourne en mode daemon, attendant les commandes via Airflow
+    command: python /app/scraper_daemon.py
+
+  # ==========================================
+  # JUPYTER NOTEBOOK - Développement PySpark
+  # ==========================================
+  jupyter:
+    image: jupyter/pyspark-notebook:latest
+    container_name: bigdata_jupyter
+    hostname: jupyter
+    depends_on:
+      - spark-master
+      - kafka
+      - minio
+    ports:
+      - "8888:8888"    # Jupyter Notebook
+      - "4040:4040"    # Spark UI for running jobs
+    environment:
+      JUPYTER_ENABLE_LAB: "yes"
+      JUPYTER_TOKEN: "bigdata2024"
+      SPARK_MASTER: "spark://spark-master:7077"
+      PYSPARK_SUBMIT_ARGS: "--master spark://spark-master:7077 pyspark-shell"
+      # MinIO/S3 Configuration
+      AWS_ACCESS_KEY_ID: minioadmin
+      AWS_SECRET_ACCESS_KEY: minioadmin123
+      AWS_REGION: us-east-1
+      MINIO_ENDPOINT: http://minio:9000
+    volumes:
+      - ./notebooks:/home/jovyan/work
+      - ./data:/home/jovyan/data
+      - ./spark:/home/jovyan/spark-apps
+      - ./kafka:/home/jovyan/kafka
+    networks:
+      - bigdata_network
+    restart: unless-stopped
+    user: root
+    command: >
+      bash -c "
+        pip install --quiet --no-cache-dir \
+          kafka-python confluent-kafka avro-python3 \
+          google-cloud-storage google-cloud-bigquery \
+          boto3 minio \
+          pandas pyarrow fastparquet \
+          scrapy beautifulsoup4 selenium playwright \
+          spacy nltk pdfplumber python-docx langdetect \
+          fake-useragent requests-html lxml &&
+        start-notebook.sh --NotebookApp.token='bigdata2024'
+      "
+
+# ==========================================
+# VOLUMES - Persistence des données
+# ==========================================
+volumes:
+  kafka_data:
+    driver: local
+  minio_data:
+    driver: local
+  spark_master_data:
+    driver: local
+  spark_worker_1_data:
+    driver: local
+  spark_worker_2_data:
+    driver: local
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local
+  superset_home:
+    driver: local
+
+# ==========================================
+# NETWORKS - Réseau interne
+# ==========================================
+networks:
+  bigdata_network:
+    driver: bridge
+    name: bigdata_network

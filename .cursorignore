@@ -1,0 +1,24 @@
+# Cursor Ignore - Fichiers à exclure de l'indexation
+
+# Données
+data/raw/*
+data/processed/*
+
+# Logs
+*.log
+airflow/logs/*
+
+# Credentials
+credentials/*
+*.json
+
+# Docker volumes
+volumes/*
+
+# Node modules (si applicable)
+node_modules/
+
+# Python cache
+__pycache__/
+*.pyc
+

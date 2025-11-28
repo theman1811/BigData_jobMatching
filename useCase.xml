@@ -1,0 +1,318 @@
+<mxfile host="app.diagrams.net" agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36 Edg/142.0.0.0" version="29.1.1" pages="5">
+  <diagram name="1. Gestion des Données" id="module-data">
+    <mxGraphModel dx="891" dy="658" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1600" pageHeight="1200" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="title-data" parent="1" style="text;html=1;strokeColor=none;fillColor=#fff2cc;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=24;fontStyle=1" value="Module 1 : Gestion des Données" vertex="1">
+          <mxGeometry height="50" width="600" x="180" y="20" as="geometry" />
+        </mxCell>
+        <mxCell id="pf0P2ZuCuuZZOkwppEps-1" edge="1" parent="1" source="actor-dev-data" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" target="actor-scraper-data" value="">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="actor-dev-data" parent="1" style="shape=umlActor;verticalLabelPosition=bottom;verticalAlign=top;html=1;outlineConnect=0;fillColor=#fff2cc;strokeColor=#d6b656;" value="Développeur&#xa;Data Engineer" vertex="1">
+          <mxGeometry height="60" width="30" x="80" y="150" as="geometry" />
+        </mxCell>
+        <mxCell id="actor-scraper-data" parent="1" style="shape=umlActor;verticalLabelPosition=bottom;verticalAlign=top;html=1;outlineConnect=0;fillColor=#f8cecc;strokeColor=#b85450;" value="Système&#xa;de Scraping" vertex="1">
+          <mxGeometry height="60" width="30" x="80" y="300" as="geometry" />
+        </mxCell>
+        <mxCell id="actor-airflow-data" parent="1" style="shape=umlActor;verticalLabelPosition=bottom;verticalAlign=top;html=1;outlineConnect=0;fillColor=#e1d5e7;strokeColor=#9673a6;" value="Apache&#xa;Airflow" vertex="1">
+          <mxGeometry height="60" width="30" x="80" y="600" as="geometry" />
+        </mxCell>
+        <mxCell id="uc-scraper-offres" parent="1" style="ellipse;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;" value="Scraper les offres d&#39;emploi" vertex="1">
+          <mxGeometry height="80" width="250" x="350" y="150" as="geometry" />
+        </mxCell>
+        <mxCell id="uc-scraper-cvs" parent="1" style="ellipse;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;" value="Scraper les CVs" vertex="1">
+          <mxGeometry height="80" width="250" x="350" y="260" as="geometry" />
+        </mxCell>
+        <mxCell id="uc-traiter-donnees" parent="1" style="ellipse;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;" value="Traiter les données avec Spark" vertex="1">
+          <mxGeometry height="80" width="250" x="350" y="370" as="geometry" />
+        </mxCell>
+        <mxCell id="uc-extraire-nlp" parent="1" style="ellipse;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;" value="Extraire les informations avec NLP" vertex="1">
+          <mxGeometry height="80" width="250" x="350" y="480" as="geometry" />
+        </mxCell>
+        <mxCell id="uc-charger-bigquery" parent="1" style="ellipse;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;" value="Charger les données dans BigQuery" vertex="1">
+          <mxGeometry height="80" width="250" x="350" y="590" as="geometry" />
+        </mxCell>
+        <mxCell id="uc-orchestrer" parent="1" style="ellipse;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;" value="Orchestrer les pipelines avec Airflow" vertex="1">
+          <mxGeometry height="80" width="250" x="350" y="700" as="geometry" />
+        </mxCell>
+        <mxCell id="uc-dedupliquer" parent="1" style="ellipse;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;" value="Dédupliquer les données" vertex="1">
+          <mxGeometry height="80" width="250" x="350" y="810" as="geometry" />
+        </mxCell>
+        <mxCell id="assoc-dev-scraper-offres" edge="1" parent="1" source="actor-dev-data" style="endArrow=plain;html=1;rounded=0;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" target="uc-scraper-offres" value="">
+          <mxGeometry height="50" relative="1" width="50" as="geometry">
+            <mxPoint x="300" y="300" as="sourcePoint" />
+            <mxPoint x="350" y="250" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="assoc-dev-scraper-cvs" edge="1" parent="1" source="actor-dev-data" style="endArrow=plain;html=1;rounded=0;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" target="uc-scraper-cvs" value="">
+          <mxGeometry height="50" relative="1" width="50" as="geometry">
+            <mxPoint x="300" y="300" as="sourcePoint" />
+            <mxPoint x="350" y="250" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="assoc-dev-traiter" edge="1" parent="1" source="actor-dev-data" style="endArrow=plain;html=1;rounded=0;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" target="uc-traiter-donnees" value="">
+          <mxGeometry height="50" relative="1" width="50" as="geometry">
+            <mxPoint x="300" y="300" as="sourcePoint" />
+            <mxPoint x="350" y="250" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="assoc-dev-nlp" edge="1" parent="1" source="actor-dev-data" style="endArrow=plain;html=1;rounded=0;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" target="uc-extraire-nlp" value="">
+          <mxGeometry height="50" relative="1" width="50" as="geometry">
+            <mxPoint x="300" y="300" as="sourcePoint" />
+            <mxPoint x="350" y="250" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="assoc-dev-bigquery" edge="1" parent="1" source="actor-dev-data" style="endArrow=plain;html=1;rounded=0;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" target="uc-charger-bigquery" value="">
+          <mxGeometry height="50" relative="1" width="50" as="geometry">
+            <mxPoint x="300" y="300" as="sourcePoint" />
+            <mxPoint x="350" y="250" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="assoc-dev-orchestrer" edge="1" parent="1" source="actor-dev-data" style="endArrow=plain;html=1;rounded=0;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" target="uc-orchestrer" value="">
+          <mxGeometry height="50" relative="1" width="50" as="geometry">
+            <mxPoint x="300" y="300" as="sourcePoint" />
+            <mxPoint x="350" y="250" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="assoc-dev-dedupliquer" edge="1" parent="1" source="actor-dev-data" style="endArrow=plain;html=1;rounded=0;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" target="uc-dedupliquer" value="">
+          <mxGeometry height="50" relative="1" width="50" as="geometry">
+            <mxPoint x="300" y="300" as="sourcePoint" />
+            <mxPoint x="350" y="250" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="assoc-scraper-offres" edge="1" parent="1" source="actor-scraper-data" style="endArrow=plain;html=1;rounded=0;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" target="uc-scraper-offres" value="">
+          <mxGeometry height="50" relative="1" width="50" as="geometry">
+            <mxPoint x="300" y="300" as="sourcePoint" />
+            <mxPoint x="350" y="250" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="assoc-scraper-cvs" edge="1" parent="1" source="actor-scraper-data" style="endArrow=plain;html=1;rounded=0;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" target="uc-scraper-cvs" value="">
+          <mxGeometry height="50" relative="1" width="50" as="geometry">
+            <mxPoint x="300" y="300" as="sourcePoint" />
+            <mxPoint x="350" y="250" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="assoc-airflow-orchestrer" edge="1" parent="1" source="actor-airflow-data" style="endArrow=plain;html=1;rounded=0;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" target="uc-orchestrer" value="">
+          <mxGeometry height="50" relative="1" width="50" as="geometry">
+            <mxPoint x="300" y="300" as="sourcePoint" />
+            <mxPoint x="350" y="250" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="assoc-airflow-bigquery" edge="1" parent="1" source="actor-airflow-data" style="endArrow=plain;html=1;rounded=0;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" target="uc-charger-bigquery" value="">
+          <mxGeometry height="50" relative="1" width="50" as="geometry">
+            <mxPoint x="300" y="300" as="sourcePoint" />
+            <mxPoint x="350" y="250" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+  <diagram name="2. Analyse du Marché" id="module-market">
+    <mxGraphModel dx="891" dy="658" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1600" pageHeight="1200" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="title-market" parent="1" style="text;html=1;strokeColor=none;fillColor=#d5e8d4;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=24;fontStyle=1" value="Module 2 : Analyse du Marché de l&#39;Emploi" vertex="1">
+          <mxGeometry height="50" width="600" x="160" y="20" as="geometry" />
+        </mxCell>
+        <mxCell id="actor-analyst-market" parent="1" style="shape=umlActor;verticalLabelPosition=bottom;verticalAlign=top;html=1;outlineConnect=0;fillColor=#d5e8d4;strokeColor=#82b366;" value="Analyste&#xa;de Données" vertex="1">
+          <mxGeometry height="60" width="30" x="80" y="150" as="geometry" />
+        </mxCell>
+        <mxCell id="uc-tendances" parent="1" style="ellipse;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;" value="Consulter les tendances des offres par secteur" vertex="1">
+          <mxGeometry height="80" width="300" x="350" y="150" as="geometry" />
+        </mxCell>
+        <mxCell id="uc-salaires" parent="1" style="ellipse;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;" value="Analyser les salaires moyens" vertex="1">
+          <mxGeometry height="80" width="300" x="350" y="260" as="geometry" />
+        </mxCell>
+        <mxCell id="uc-competences" parent="1" style="ellipse;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;" value="Identifier les compétences les plus demandées" vertex="1">
+          <mxGeometry height="80" width="300" x="350" y="370" as="geometry" />
+        </mxCell>
+        <mxCell id="uc-evolution" parent="1" style="ellipse;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;" value="Visualiser l&#39;évolution temporelle du marché" vertex="1">
+          <mxGeometry height="80" width="300" x="350" y="480" as="geometry" />
+        </mxCell>
+        <mxCell id="assoc-analyst-tendances" edge="1" parent="1" source="actor-analyst-market" style="endArrow=plain;html=1;rounded=0;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" target="uc-tendances" value="">
+          <mxGeometry height="50" relative="1" width="50" as="geometry">
+            <mxPoint x="300" y="300" as="sourcePoint" />
+            <mxPoint x="350" y="250" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="assoc-analyst-salaires" edge="1" parent="1" source="actor-analyst-market" style="endArrow=plain;html=1;rounded=0;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" target="uc-salaires" value="">
+          <mxGeometry height="50" relative="1" width="50" as="geometry">
+            <mxPoint x="300" y="300" as="sourcePoint" />
+            <mxPoint x="350" y="250" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="assoc-analyst-competences" edge="1" parent="1" source="actor-analyst-market" style="endArrow=plain;html=1;rounded=0;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" target="uc-competences" value="">
+          <mxGeometry height="50" relative="1" width="50" as="geometry">
+            <mxPoint x="300" y="300" as="sourcePoint" />
+            <mxPoint x="350" y="250" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="assoc-analyst-evolution" edge="1" parent="1" source="actor-analyst-market" style="endArrow=plain;html=1;rounded=0;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" target="uc-evolution" value="">
+          <mxGeometry height="50" relative="1" width="50" as="geometry">
+            <mxPoint x="300" y="300" as="sourcePoint" />
+            <mxPoint x="350" y="250" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+  <diagram name="3. Matching Offres-CVs" id="module-matching">
+    <mxGraphModel dx="891" dy="658" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1600" pageHeight="1200" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="title-matching" parent="1" style="text;html=1;strokeColor=none;fillColor=#dae8fc;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=24;fontStyle=1" value="Module 3 : Matching Offres-CVs" vertex="1">
+          <mxGeometry height="50" width="600" x="170" y="20" as="geometry" />
+        </mxCell>
+        <mxCell id="actor-analyst-matching" parent="1" style="shape=umlActor;verticalLabelPosition=bottom;verticalAlign=top;html=1;outlineConnect=0;fillColor=#d5e8d4;strokeColor=#82b366;" value="Analyste&#xa;de Données" vertex="1">
+          <mxGeometry height="60" width="30" x="80" y="150" as="geometry" />
+        </mxCell>
+        <mxCell id="uc-calculer-score" parent="1" style="ellipse;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" value="Calculer le score de compatibilité" vertex="1">
+          <mxGeometry height="80" width="250" x="350" y="150" as="geometry" />
+        </mxCell>
+        <mxCell id="uc-recommandations" parent="1" style="ellipse;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" value="Générer des recommandations personnalisées" vertex="1">
+          <mxGeometry height="80" width="250" x="350" y="260" as="geometry" />
+        </mxCell>
+        <mxCell id="uc-gap" parent="1" style="ellipse;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" value="Effectuer une analyse de gap de compétences" vertex="1">
+          <mxGeometry height="80" width="250" x="350" y="370" as="geometry" />
+        </mxCell>
+        <mxCell id="uc-predire-salaire" parent="1" style="ellipse;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" value="Prédire le salaire" vertex="1">
+          <mxGeometry height="80" width="250" x="350" y="480" as="geometry" />
+        </mxCell>
+        <mxCell id="assoc-analyst-score" edge="1" parent="1" source="actor-analyst-matching" style="endArrow=plain;html=1;rounded=0;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" target="uc-calculer-score" value="">
+          <mxGeometry height="50" relative="1" width="50" as="geometry">
+            <mxPoint x="300" y="300" as="sourcePoint" />
+            <mxPoint x="350" y="250" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="assoc-analyst-reco" edge="1" parent="1" source="actor-analyst-matching" style="endArrow=plain;html=1;rounded=0;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" target="uc-recommandations" value="">
+          <mxGeometry height="50" relative="1" width="50" as="geometry">
+            <mxPoint x="300" y="300" as="sourcePoint" />
+            <mxPoint x="350" y="250" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="assoc-analyst-gap" edge="1" parent="1" source="actor-analyst-matching" style="endArrow=plain;html=1;rounded=0;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" target="uc-gap" value="">
+          <mxGeometry height="50" relative="1" width="50" as="geometry">
+            <mxPoint x="300" y="300" as="sourcePoint" />
+            <mxPoint x="350" y="250" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="assoc-analyst-salaire" edge="1" parent="1" source="actor-analyst-matching" style="endArrow=plain;html=1;rounded=0;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" target="uc-predire-salaire" value="">
+          <mxGeometry height="50" relative="1" width="50" as="geometry">
+            <mxPoint x="300" y="300" as="sourcePoint" />
+            <mxPoint x="350" y="250" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+  <diagram name="4. Intelligence Économique" id="module-intelligence">
+    <mxGraphModel dx="891" dy="658" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1600" pageHeight="1200" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="title-intelligence" parent="1" style="text;html=1;strokeColor=none;fillColor=#e1d5e7;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=24;fontStyle=1" value="Module 4 : Intelligence Économique" vertex="1">
+          <mxGeometry height="50" width="600" x="140" y="20" as="geometry" />
+        </mxCell>
+        <mxCell id="actor-analyst-intelligence" parent="1" style="shape=umlActor;verticalLabelPosition=bottom;verticalAlign=top;html=1;outlineConnect=0;fillColor=#d5e8d4;strokeColor=#82b366;" value="Analyste&#xa;de Données" vertex="1">
+          <mxGeometry height="60" width="30" x="80" y="150" as="geometry" />
+        </mxCell>
+        <mxCell id="uc-strategies" parent="1" style="ellipse;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;" value="Analyser les stratégies de recrutement" vertex="1">
+          <mxGeometry height="80" width="250" x="350" y="150" as="geometry" />
+        </mxCell>
+        <mxCell id="uc-technologies" parent="1" style="ellipse;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;" value="Détecter l&#39;émergence de nouvelles technologies" vertex="1">
+          <mxGeometry height="80" width="250" x="350" y="260" as="geometry" />
+        </mxCell>
+        <mxCell id="uc-bassins" parent="1" style="ellipse;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;" value="Cartographier les bassins d&#39;emploi" vertex="1">
+          <mxGeometry height="80" width="250" x="350" y="370" as="geometry" />
+        </mxCell>
+        <mxCell id="uc-previsions" parent="1" style="ellipse;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;" value="Générer des prévisions du marché" vertex="1">
+          <mxGeometry height="80" width="250" x="350" y="480" as="geometry" />
+        </mxCell>
+        <mxCell id="assoc-analyst-strategies" edge="1" parent="1" source="actor-analyst-intelligence" style="endArrow=plain;html=1;rounded=0;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" target="uc-strategies" value="">
+          <mxGeometry height="50" relative="1" width="50" as="geometry">
+            <mxPoint x="300" y="300" as="sourcePoint" />
+            <mxPoint x="350" y="250" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="assoc-analyst-tech" edge="1" parent="1" source="actor-analyst-intelligence" style="endArrow=plain;html=1;rounded=0;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" target="uc-technologies" value="">
+          <mxGeometry height="50" relative="1" width="50" as="geometry">
+            <mxPoint x="300" y="300" as="sourcePoint" />
+            <mxPoint x="350" y="250" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="assoc-analyst-bassins" edge="1" parent="1" source="actor-analyst-intelligence" style="endArrow=plain;html=1;rounded=0;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" target="uc-bassins" value="">
+          <mxGeometry height="50" relative="1" width="50" as="geometry">
+            <mxPoint x="300" y="300" as="sourcePoint" />
+            <mxPoint x="350" y="250" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="assoc-analyst-previsions" edge="1" parent="1" source="actor-analyst-intelligence" style="endArrow=plain;html=1;rounded=0;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" target="uc-previsions" value="">
+          <mxGeometry height="50" relative="1" width="50" as="geometry">
+            <mxPoint x="300" y="300" as="sourcePoint" />
+            <mxPoint x="350" y="250" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+  <diagram name="5. Administration" id="module-admin">
+    <mxGraphModel dx="891" dy="658" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1600" pageHeight="1200" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="title-admin" parent="1" style="text;html=1;strokeColor=none;fillColor=#f8cecc;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=24;fontStyle=1" value="Module 5 : Administration" vertex="1">
+          <mxGeometry height="50" width="600" x="130" y="20" as="geometry" />
+        </mxCell>
+        <mxCell id="actor-admin-admin" parent="1" style="shape=umlActor;verticalLabelPosition=bottom;verticalAlign=top;html=1;outlineConnect=0;fillColor=#dae8fc;strokeColor=#6c8ebf;" value="Administrateur&#xa;Système" vertex="1">
+          <mxGeometry height="60" width="30" x="80" y="150" as="geometry" />
+        </mxCell>
+        <mxCell id="actor-analyst-admin" parent="1" style="shape=umlActor;verticalLabelPosition=bottom;verticalAlign=top;html=1;outlineConnect=0;fillColor=#d5e8d4;strokeColor=#82b366;" value="Analyste&#xa;de Données" vertex="1">
+          <mxGeometry height="60" width="30" x="80" y="300" as="geometry" />
+        </mxCell>
+        <mxCell id="actor-dev-admin" parent="1" style="shape=umlActor;verticalLabelPosition=bottom;verticalAlign=top;html=1;outlineConnect=0;fillColor=#fff2cc;strokeColor=#d6b656;" value="Développeur&#xa;Data Engineer" vertex="1">
+          <mxGeometry height="60" width="30" x="80" y="450" as="geometry" />
+        </mxCell>
+        <mxCell id="uc-configurer" parent="1" style="ellipse;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;" value="Configurer l&#39;infrastructure" vertex="1">
+          <mxGeometry height="80" width="250" x="350" y="150" as="geometry" />
+        </mxCell>
+        <mxCell id="uc-monitorer" parent="1" style="ellipse;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;" value="Monitorer le système" vertex="1">
+          <mxGeometry height="80" width="250" x="350" y="260" as="geometry" />
+        </mxCell>
+        <mxCell id="uc-dashboards" parent="1" style="ellipse;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;" value="Créer des dashboards Superset" vertex="1">
+          <mxGeometry height="80" width="250" x="350" y="370" as="geometry" />
+        </mxCell>
+        <mxCell id="uc-dags" parent="1" style="ellipse;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;" value="Gérer les DAGs Airflow" vertex="1">
+          <mxGeometry height="80" width="250" x="350" y="480" as="geometry" />
+        </mxCell>
+        <mxCell id="assoc-admin-config" edge="1" parent="1" source="actor-admin-admin" style="endArrow=plain;html=1;rounded=0;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" target="uc-configurer" value="">
+          <mxGeometry height="50" relative="1" width="50" as="geometry">
+            <mxPoint x="300" y="300" as="sourcePoint" />
+            <mxPoint x="350" y="250" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="assoc-admin-monitor" edge="1" parent="1" source="actor-admin-admin" style="endArrow=plain;html=1;rounded=0;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" target="uc-monitorer" value="">
+          <mxGeometry height="50" relative="1" width="50" as="geometry">
+            <mxPoint x="300" y="300" as="sourcePoint" />
+            <mxPoint x="350" y="250" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="assoc-analyst-dashboards" edge="1" parent="1" source="actor-analyst-admin" style="endArrow=plain;html=1;rounded=0;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" target="uc-dashboards" value="">
+          <mxGeometry height="50" relative="1" width="50" as="geometry">
+            <mxPoint x="300" y="300" as="sourcePoint" />
+            <mxPoint x="350" y="250" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="assoc-dev-dags" edge="1" parent="1" source="actor-dev-admin" style="endArrow=plain;html=1;rounded=0;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" target="uc-dags" value="">
+          <mxGeometry height="50" relative="1" width="50" as="geometry">
+            <mxPoint x="300" y="300" as="sourcePoint" />
+            <mxPoint x="350" y="250" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

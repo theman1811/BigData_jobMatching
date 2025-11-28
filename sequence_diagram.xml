@@ -1,0 +1,293 @@
+<mxfile host="app.diagrams.net" agent="Mozilla/5.0" version="29.1.1" pages="1">
+  <diagram name="Diagramme de Séquences UML - Pipeline Big Data" id="sequence-diagram">
+    <mxGraphModel dx="1600" dy="1200" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="2000" pageHeight="1700" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+
+        <!-- Titre -->
+        <mxCell id="title" parent="1" style="text;html=1;strokeColor=none;fillColor=#dae8fc;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=28;fontStyle=1" value="Diagramme de Séquences UML - Pipeline Big Data Job Matching" vertex="1">
+          <mxGeometry height="60" width="1900" x="50" y="20" as="geometry" />
+        </mxCell>
+
+        <!-- Lignes de vie avec boîtes d'activation -->
+        <mxCell id="lifeline-user" parent="1" style="html=1;shape=umlLifeline;perimeter=lifelinePerimeter;whiteSpace=wrap;html=1;container=1;collapsible=0;recursiveResize=0;outlineConnect=0;" vertex="1">
+          <mxGeometry height="1300" width="120" x="100" y="120" as="geometry" />
+        </mxCell>
+        <mxCell id="actor-user" parent="lifeline-user" value="Data&#xa;Analyst" style="html=1;shape=umlActor;verticalLabelPosition=bottom;verticalAlign=top;align=center;fillColor=#fff2cc;strokeColor=#d6b656;" vertex="1">
+          <mxGeometry y="20" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="line-user" parent="lifeline-user" value="" style="html=1;endArrow=none;endFill=0;endSize=12;html=1;verticalAlign=bottom;strokeWidth=2;strokeColor=#666666;dashed=1;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" vertex="1">
+          <mxGeometry y="80" width="120" height="1220" as="geometry" />
+        </mxCell>
+
+        <mxCell id="lifeline-airflow" parent="1" style="html=1;shape=umlLifeline;perimeter=lifelinePerimeter;whiteSpace=wrap;html=1;container=1;collapsible=0;recursiveResize=0;outlineConnect=0;" vertex="1">
+          <mxGeometry height="1300" width="120" x="280" y="120" as="geometry" />
+        </mxCell>
+        <mxCell id="actor-airflow" parent="lifeline-airflow" value="Airflow&#xa;DAG" style="html=1;verticalLabelPosition=bottom;verticalAlign=top;align=center;fillColor=#e1d5e7;strokeColor=#9673a6;" vertex="1">
+          <mxGeometry y="20" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="line-airflow" parent="lifeline-airflow" value="" style="html=1;endArrow=none;endFill=0;endSize=12;html=1;verticalAlign=bottom;strokeWidth=2;strokeColor=#666666;dashed=1;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" vertex="1">
+          <mxGeometry y="80" width="120" height="1220" as="geometry" />
+        </mxCell>
+
+        <mxCell id="lifeline-scraper" parent="1" style="html=1;shape=umlLifeline;perimeter=lifelinePerimeter;whiteSpace=wrap;html=1;container=1;collapsible=0;recursiveResize=0;outlineConnect=0;" vertex="1">
+          <mxGeometry height="1300" width="120" x="460" y="120" as="geometry" />
+        </mxCell>
+        <mxCell id="actor-scraper" parent="lifeline-scraper" value="Scraper&#xa;Service" style="html=1;verticalLabelPosition=bottom;verticalAlign=top;align=center;fillColor=#f8cecc;strokeColor=#b85450;" vertex="1">
+          <mxGeometry y="20" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="line-scraper" parent="lifeline-scraper" value="" style="html=1;endArrow=none;endFill=0;endSize=12;html=1;verticalAlign=bottom;strokeWidth=2;strokeColor=#666666;dashed=1;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" vertex="1">
+          <mxGeometry y="80" width="120" height="1220" as="geometry" />
+        </mxCell>
+
+        <mxCell id="lifeline-kafka" parent="1" style="html=1;shape=umlLifeline;perimeter=lifelinePerimeter;whiteSpace=wrap;html=1;container=1;collapsible=0;recursiveResize=0;outlineConnect=0;" vertex="1">
+          <mxGeometry height="1300" width="120" x="640" y="120" as="geometry" />
+        </mxCell>
+        <mxCell id="actor-kafka" parent="lifeline-kafka" value="Kafka&#xa;Broker" style="html=1;verticalLabelPosition=bottom;verticalAlign=top;align=center;fillColor=#cce7ff;strokeColor=#4a86e8;" vertex="1">
+          <mxGeometry y="20" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="line-kafka" parent="lifeline-kafka" value="" style="html=1;endArrow=none;endFill=0;endSize=12;html=1;verticalAlign=bottom;strokeWidth=2;strokeColor=#666666;dashed=1;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" vertex="1">
+          <mxGeometry y="80" width="120" height="1220" as="geometry" />
+        </mxCell>
+
+        <mxCell id="lifeline-spark" parent="1" style="html=1;shape=umlLifeline;perimeter=lifelinePerimeter;whiteSpace=wrap;html=1;container=1;collapsible=0;recursiveResize=0;outlineConnect=0;" vertex="1">
+          <mxGeometry height="1300" width="120" x="820" y="120" as="geometry" />
+        </mxCell>
+        <mxCell id="actor-spark" parent="lifeline-spark" value="Spark&#xa;Streaming Job" style="html=1;verticalLabelPosition=bottom;verticalAlign=top;align=center;fillColor=#c4f0c2;strokeColor=#38761d;" vertex="1">
+          <mxGeometry y="20" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="line-spark" parent="lifeline-spark" value="" style="html=1;endArrow=none;endFill=0;endSize=12;html=1;verticalAlign=bottom;strokeWidth=2;strokeColor=#666666;dashed=1;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" vertex="1">
+          <mxGeometry y="80" width="120" height="1220" as="geometry" />
+        </mxCell>
+
+        <mxCell id="lifeline-minio" parent="1" style="html=1;shape=umlLifeline;perimeter=lifelinePerimeter;whiteSpace=wrap;html=1;container=1;collapsible=0;recursiveResize=0;outlineConnect=0;" vertex="1">
+          <mxGeometry height="1300" width="120" x="1000" y="120" as="geometry" />
+        </mxCell>
+        <mxCell id="actor-minio" parent="lifeline-minio" value="MinIO&#xa;Client" style="html=1;verticalLabelPosition=bottom;verticalAlign=top;align=center;fillColor=#b2dfdb;strokeColor=#00695c;" vertex="1">
+          <mxGeometry y="20" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="line-minio" parent="lifeline-minio" value="" style="html=1;endArrow=none;endFill=0;endSize=12;html=1;verticalAlign=bottom;strokeWidth=2;strokeColor=#666666;dashed=1;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" vertex="1">
+          <mxGeometry y="80" width="120" height="1220" as="geometry" />
+        </mxCell>
+
+        <mxCell id="lifeline-bigquery" parent="1" style="html=1;shape=umlLifeline;perimeter=lifelinePerimeter;whiteSpace=wrap;html=1;container=1;collapsible=0;recursiveResize=0;outlineConnect=0;" vertex="1">
+          <mxGeometry height="1300" width="120" x="1180" y="120" as="geometry" />
+        </mxCell>
+        <mxCell id="actor-bigquery" parent="lifeline-bigquery" value="BigQuery&#xa;Loader" style="html=1;verticalLabelPosition=bottom;verticalAlign=top;align=center;fillColor=#ffe6cc;strokeColor=#d79b00;" vertex="1">
+          <mxGeometry y="20" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="line-bigquery" parent="lifeline-bigquery" value="" style="html=1;endArrow=none;endFill=0;endSize=12;html=1;verticalAlign=bottom;strokeWidth=2;strokeColor=#666666;dashed=1;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" vertex="1">
+          <mxGeometry y="80" width="120" height="1220" as="geometry" />
+        </mxCell>
+
+        <mxCell id="lifeline-superset" parent="1" style="html=1;shape=umlLifeline;perimeter=lifelinePerimeter;whiteSpace=wrap;html=1;container=1;collapsible=0;recursiveResize=0;outlineConnect=0;" vertex="1">
+          <mxGeometry height="1300" width="120" x="1360" y="120" as="geometry" />
+        </mxCell>
+        <mxCell id="actor-superset" parent="lifeline-superset" value="Superset&#xa;Dashboard" style="html=1;verticalLabelPosition=bottom;verticalAlign=top;align=center;fillColor=#f5f5f5;strokeColor=#666666;" vertex="1">
+          <mxGeometry y="20" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="line-superset" parent="lifeline-superset" value="" style="html=1;endArrow=none;endFill=0;endSize=12;html=1;verticalAlign=bottom;strokeWidth=2;strokeColor=#666666;dashed=1;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" vertex="1">
+          <mxGeometry y="80" width="120" height="1220" as="geometry" />
+        </mxCell>
+
+        <!-- Messages synchrones avec boîtes d'activation -->
+
+        <!-- 1. Trigger DAG (synchrone) -->
+        <mxCell id="msg1" parent="1" value="triggerScrapingDAG()" style="html=1;verticalAlign=bottom;endArrow=block;curved=1;rounded=0;strokeWidth=2;strokeColor=#1ba1e2;fontStyle=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" source="lifeline-user" target="lifeline-airflow">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="160" y="200" as="sourcePoint" />
+            <mxPoint x="340" y="200" as="targetPoint" />
+            <Array as="points">
+              <mxPoint x="160" y="200" />
+              <mxPoint x="340" y="200" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <!-- Boîte d'activation Airflow -->
+        <mxCell id="activation-airflow-1" parent="lifeline-airflow" value="" style="html=1;rounded=0;fillColor=#e1d5e7;strokeColor=#9673a6;opacity=30;" vertex="1">
+          <mxGeometry y="210" width="20" height="80" as="geometry" />
+        </mxCell>
+
+        <!-- 2. Start Scraping (synchrone) -->
+        <mxCell id="msg2" parent="1" value="startScraping()" style="html=1;verticalAlign=bottom;endArrow=block;curved=1;rounded=0;strokeWidth=2;strokeColor=#1ba1e2;fontStyle=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" source="lifeline-airflow" target="lifeline-scraper">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="340" y="280" as="sourcePoint" />
+            <mxPoint x="520" y="280" as="targetPoint" />
+            <Array as="points">
+              <mxPoint x="340" y="280" />
+              <mxPoint x="520" y="280" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <!-- Boîte d'activation Scraper -->
+        <mxCell id="activation-scraper" parent="lifeline-scraper" value="" style="html=1;rounded=0;fillColor=#f8cecc;strokeColor=#b85450;opacity=30;" vertex="1">
+          <mxGeometry y="290" width="20" height="240" as="geometry" />
+        </mxCell>
+
+        <!-- 3. Publish Raw Data (asynchrone) -->
+        <mxCell id="msg3" parent="1" value="&lt;&lt;async&gt;&gt;&#xa;publish(job-offers-raw, cvs-raw)" style="html=1;verticalAlign=bottom;endArrow=open;curved=1;rounded=0;strokeWidth=2;strokeColor=#ff9900;dashed=1;fontStyle=0;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" source="lifeline-scraper" target="lifeline-kafka">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="520" y="330" as="sourcePoint" />
+            <mxPoint x="700" y="330" as="targetPoint" />
+            <Array as="points">
+              <mxPoint x="520" y="330" />
+              <mxPoint x="700" y="330" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+
+        <!-- 4. Save Raw Files (synchrone) -->
+        <mxCell id="msg4" parent="1" value="saveRawFiles(html, pdf)" style="html=1;verticalAlign=bottom;endArrow=block;curved=1;rounded=0;strokeWidth=2;strokeColor=#1ba1e2;fontStyle=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" source="lifeline-scraper" target="lifeline-minio">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="520" y="380" as="sourcePoint" />
+            <mxPoint x="1060" y="380" as="targetPoint" />
+            <Array as="points">
+              <mxPoint x="520" y="380" />
+              <mxPoint x="1060" y="380" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+
+        <!-- 5. Consume Messages (asynchrone continu) -->
+        <mxCell id="msg5" parent="1" value="&lt;&lt;async stream&gt;&gt;&#xa;consume(job-offers-raw, cvs-raw)" style="html=1;verticalAlign=bottom;endArrow=open;curved=1;rounded=0;strokeWidth=2;strokeColor=#ff9900;dashed=1;fontStyle=0;exitX=0;exitY=0.5;exitDx=0;exitDy=0;entryX=1;entryY=0.5;entryDx=0;entryDy=0;" edge="1" source="lifeline-kafka" target="lifeline-spark">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="760" y="450" as="sourcePoint" />
+            <mxPoint x="880" y="450" as="targetPoint" />
+            <Array as="points">
+              <mxPoint x="760" y="450" />
+              <mxPoint x="880" y="450" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <!-- Boîte d'activation Spark -->
+        <mxCell id="activation-spark" parent="lifeline-spark" value="" style="html=1;rounded=0;fillColor=#dae8fc;strokeColor=#6c8ebf;opacity=30;" vertex="1">
+          <mxGeometry y="460" width="20" height="200" as="geometry" />
+        </mxCell>
+
+        <!-- 6. Process Data (synchrone interne) -->
+        <mxCell id="msg6" parent="1" value="processNLP(text, skills)" style="html=1;verticalAlign=bottom;endArrow=block;curved=1;rounded=0;strokeWidth=2;strokeColor=#1ba1e2;fontStyle=1;exitX=0.5;exitY=0.5;exitDx=0;exitDy=0;entryX=0.5;entryY=0.5;entryDx=0;entryDy=0;" edge="1" source="lifeline-spark" target="lifeline-spark">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="880" y="480" as="sourcePoint" />
+            <mxPoint x="900" y="480" as="targetPoint" />
+            <Array as="points">
+              <mxPoint x="880" y="480" />
+              <mxPoint x="900" y="480" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+
+        <!-- 7. Save Processed Data (synchrone) -->
+        <mxCell id="msg7" parent="1" value="saveProcessedData(parquet)" style="html=1;verticalAlign=bottom;endArrow=block;curved=1;rounded=0;strokeWidth=2;strokeColor=#1ba1e2;fontStyle=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" source="lifeline-spark" target="lifeline-minio">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="880" y="550" as="sourcePoint" />
+            <mxPoint x="1060" y="550" as="targetPoint" />
+            <Array as="points">
+              <mxPoint x="880" y="550" />
+              <mxPoint x="1060" y="550" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+
+        <!-- 8. Publish Processed Data (asynchrone) -->
+        <mxCell id="msg8" parent="1" value="&lt;&lt;async&gt;&gt;&#xa;publish(job-offers-parsed, cvs-parsed)" style="html=1;verticalAlign=bottom;endArrow=open;curved=1;rounded=0;strokeWidth=2;strokeColor=#ff9900;dashed=1;fontStyle=0;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" source="lifeline-spark" target="lifeline-kafka">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="880" y="600" as="sourcePoint" />
+            <mxPoint x="700" y="600" as="targetPoint" />
+            <Array as="points">
+              <mxPoint x="880" y="600" />
+              <mxPoint x="700" y="600" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+
+        <!-- 9. Load to BigQuery (synchrone batch) -->
+        <mxCell id="msg9" parent="1" value="loadBatchData()" style="html=1;verticalAlign=bottom;endArrow=block;curved=1;rounded=0;strokeWidth=2;strokeColor=#1ba1e2;fontStyle=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" source="lifeline-airflow" target="lifeline-bigquery">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="340" y="720" as="sourcePoint" />
+            <mxPoint x="1240" y="720" as="targetPoint" />
+            <Array as="points">
+              <mxPoint x="340" y="720" />
+              <mxPoint x="1240" y="720" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <!-- Boîte d'activation BigQuery Loader -->
+        <mxCell id="activation-bigquery" parent="lifeline-bigquery" value="" style="html=1;rounded=0;fillColor=#ffe6cc;strokeColor=#d79b00;opacity=30;" vertex="1">
+          <mxGeometry y="730" width="20" height="80" as="geometry" />
+        </mxCell>
+
+        <!-- 10. Read from MinIO (synchrone) -->
+        <mxCell id="msg10" parent="1" value="readProcessedData()" style="html=1;verticalAlign=bottom;endArrow=block;curved=1;rounded=0;strokeWidth=2;strokeColor=#1ba1e2;fontStyle=1;exitX=0.5;exitY=0.5;exitDx=0;exitDy=0;entryX=0.5;entryY=0.5;entryDx=0;entryDy=0;" edge="1" source="lifeline-bigquery" target="lifeline-minio">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="1240" y="750" as="sourcePoint" />
+            <mxPoint x="1060" y="750" as="targetPoint" />
+            <Array as="points">
+              <mxPoint x="1240" y="750" />
+              <mxPoint x="1060" y="750" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+
+        <!-- 11. Create Dashboard (synchrone) -->
+        <mxCell id="msg11" parent="1" value="createDashboard()" style="html=1;verticalAlign=bottom;endArrow=block;curved=1;rounded=0;strokeWidth=2;strokeColor=#1ba1e2;fontStyle=1;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" source="lifeline-user" target="lifeline-superset">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="160" y="850" as="sourcePoint" />
+            <mxPoint x="1420" y="850" as="targetPoint" />
+            <Array as="points">
+              <mxPoint x="160" y="850" />
+              <mxPoint x="1420" y="850" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <!-- Boîte d'activation Superset -->
+        <mxCell id="activation-superset" parent="lifeline-superset" value="" style="html=1;rounded=0;fillColor=#f5f5f5;strokeColor=#666666;opacity=30;" vertex="1">
+          <mxGeometry y="860" width="20" height="80" as="geometry" />
+        </mxCell>
+
+        <!-- 12. Query BigQuery (asynchrone continu) -->
+        <mxCell id="msg12" parent="1" value="&lt;&lt;async query&gt;&gt;&#xa;SELECT * FROM fact_jobs, dim_skills" style="html=1;verticalAlign=bottom;endArrow=open;curved=1;rounded=0;strokeWidth=2;strokeColor=#ff9900;dashed=1;fontStyle=0;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" edge="1" source="lifeline-superset" target="lifeline-bigquery">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="1420" y="890" as="sourcePoint" />
+            <mxPoint x="1240" y="890" as="targetPoint" />
+            <Array as="points">
+              <mxPoint x="1420" y="890" />
+              <mxPoint x="1240" y="890" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+
+        <!-- Messages de retour -->
+        <mxCell id="return1" parent="1" value="" style="html=1;verticalAlign=bottom;endArrow=block;curved=1;rounded=0;strokeWidth=1;strokeColor=#666666;dashed=1;exitX=0;exitY=0.5;exitDx=0;exitDy=0;entryX=1;entryY=0.5;entryDx=0;entryDy=0;" edge="1" source="lifeline-airflow" target="lifeline-user">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="340" y="310" as="sourcePoint" />
+            <mxPoint x="160" y="310" as="targetPoint" />
+            <Array as="points">
+              <mxPoint x="340" y="310" />
+              <mxPoint x="160" y="310" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+
+        <!-- Notes explicatives -->
+        <mxCell id="note1" parent="1" style="shape=note;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;align=left;verticalAlign=top;fontSize=10;" value="&lt;b&gt;Synchrones (appels)&lt;/b&gt;&lt;br&gt;Flèches pleines avec retour&lt;br&gt;• triggerScrapingDAG()&lt;br&gt;• startScraping()&lt;br&gt;• saveRawFiles()&lt;br&gt;• processNLP()&lt;br&gt;• loadBatchData()" vertex="1">
+          <mxGeometry x="50" y="1050" width="200" height="120" as="geometry" />
+        </mxCell>
+
+        <mxCell id="note2" parent="1" style="shape=note;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;align=left;verticalAlign=top;fontSize=10;" value="&lt;b&gt;Asynchrones (événements)&lt;/b&gt;&lt;br&gt;Flèches ouvertes pointillées&lt;br&gt;• publish() - Messages Kafka&lt;br&gt;• consume() - Streaming&lt;br&gt;• async query - BigQuery" vertex="1">
+          <mxGeometry x="270" y="1050" width="200" height="120" as="geometry" />
+        </mxCell>
+
+        <mxCell id="note3" parent="1" style="shape=note;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;align=left;verticalAlign=top;fontSize=10;" value="&lt;b&gt;Boîtes d'activation&lt;/b&gt;&lt;br&gt;Rectangles fins = période&lt;br&gt;d'exécution active&lt;br&gt;• Airflow DAG&lt;br&gt;• Scraper Service&lt;br&gt;• Spark Streaming Job&lt;br&gt;• BigQuery Loader&lt;br&gt;• Superset Dashboard" vertex="1">
+          <mxGeometry x="490" y="1050" width="200" height="120" as="geometry" />
+        </mxCell>
+
+        <!-- Légende -->
+        <mxCell id="legend" parent="1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;align=left;verticalAlign=top;fontSize=12;fontStyle=1" value="&lt;b&gt;Légende UML:&lt;/b&gt;&lt;br&gt;━━━ Appel synchrone&lt;br&gt;┅┅┅ Événement asynchrone&lt;br&gt;┄┄┄ Retour d'appel&lt;br&gt;[rect] Boîte d'activation&lt;br&gt;&lt;&lt;stereotype&gt;&gt; Type de message" vertex="1">
+          <mxGeometry x="50" y="1180" width="350" height="80" as="geometry" />
+        </mxCell>
+
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

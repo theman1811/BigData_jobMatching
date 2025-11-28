@@ -1,0 +1,265 @@
+<mxfile host="draw.io" modified="2024-11-27T12:00:00.000Z" agent="Mozilla/5.0" version="24.7.8" etag="your-etag">
+  <diagram name="Page-1" id="page-1">
+    <mxGraphModel dx="1422" dy="798" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1169" pageHeight="827" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+
+        <!-- Couche de Scraping -->
+        <mxCell id="scraping-group" value="" style="group" vertex="1" connectable="0" parent="1">
+          <mxGeometry x="40" y="40" width="300" height="200" as="geometry" />
+        </mxCell>
+        <mxCell id="scraping-bg" value="🌐 COUCHE DE SCRAPING" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1f5fe;strokeColor=#01579b;strokeWidth=2;fontSize=14;fontStyle=1;" vertex="1" parent="scraping-group">
+          <mxGeometry x="0" y="0" width="300" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="indeed" value="Indeed Scraper" style="ellipse;whiteSpace=wrap;html=1;fillColor=#e1f5fe;strokeColor=#01579b;" vertex="1" parent="scraping-group">
+          <mxGeometry x="20" y="60" width="80" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="linkedin" value="LinkedIn Scraper" style="ellipse;whiteSpace=wrap;html=1;fillColor=#e1f5fe;strokeColor=#01579b;" vertex="1" parent="scraping-group">
+          <mxGeometry x="110" y="60" width="80" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="wttj" value="WTTJ Scraper" style="ellipse;whiteSpace=wrap;html=1;fillColor=#e1f5fe;strokeColor=#01579b;" vertex="1" parent="scraping-group">
+          <mxGeometry x="200" y="60" width="80" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="apec" value="Apec Scraper" style="ellipse;whiteSpace=wrap;html=1;fillColor=#e1f5fe;strokeColor=#01579b;" vertex="1" parent="scraping-group">
+          <mxGeometry x="20" y="110" width="80" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="cvlib" value="CV Libraries Scraper" style="ellipse;whiteSpace=wrap;html=1;fillColor=#e1f5fe;strokeColor=#01579b;" vertex="1" parent="scraping-group">
+          <mxGeometry x="110" y="110" width="80" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="scrapy" value="Scrapy/Selenium Framework" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1f5fe;strokeColor=#01579b;" vertex="1" parent="scraping-group">
+          <mxGeometry x="70" y="160" width="160" height="30" as="geometry" />
+        </mxCell>
+
+        <!-- Couche d'Ingestion -->
+        <mxCell id="ingestion-group" value="" style="group" vertex="1" connectable="0" parent="1">
+          <mxGeometry x="360" y="40" width="350" height="200" as="geometry" />
+        </mxCell>
+        <mxCell id="ingestion-bg" value="📥 COUCHE D'INGESTION" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f3e5f5;strokeColor=#4a148c;strokeWidth=2;fontSize=14;fontStyle=1;" vertex="1" parent="ingestion-group">
+          <mxGeometry x="0" y="0" width="350" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="kafka-title" value="Apache Kafka (KRaft)" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=12;fontStyle=1;" vertex="1" parent="ingestion-group">
+          <mxGeometry x="10" y="50" width="150" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="kafka-broker" value="Kafka Broker&lt;br/&gt;Port: 9092" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f3e5f5;strokeColor=#4a148c;" vertex="1" parent="ingestion-group">
+          <mxGeometry x="10" y="70" width="80" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="schema-registry" value="Schema Registry&lt;br/&gt;Port: 8081" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f3e5f5;strokeColor=#4a148c;" vertex="1" parent="ingestion-group">
+          <mxGeometry x="100" y="70" width="80" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="kafka-ui" value="Kafka UI&lt;br/&gt;Port: 8080" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f3e5f5;strokeColor=#4a148c;" vertex="1" parent="ingestion-group">
+          <mxGeometry x="190" y="70" width="80" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="topics-title" value="Topics Kafka" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=12;fontStyle=1;" vertex="1" parent="ingestion-group">
+          <mxGeometry x="10" y="120" width="100" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="topic1" value="job-offers-raw" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f3e5f5;strokeColor=#4a148c;" vertex="1" parent="ingestion-group">
+          <mxGeometry x="10" y="140" width="80" height="25" as="geometry" />
+        </mxCell>
+        <mxCell id="topic2" value="cvs-raw" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f3e5f5;strokeColor=#4a148c;" vertex="1" parent="ingestion-group">
+          <mxGeometry x="100" y="140" width="80" height="25" as="geometry" />
+        </mxCell>
+        <mxCell id="topic3" value="scraping-errors" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f3e5f5;strokeColor=#4a148c;" vertex="1" parent="ingestion-group">
+          <mxGeometry x="190" y="140" width="80" height="25" as="geometry" />
+        </mxCell>
+        <mxCell id="topic4" value="scraper-commands" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f3e5f5;strokeColor=#4a148c;" vertex="1" parent="ingestion-group">
+          <mxGeometry x="10" y="165" width="80" height="25" as="geometry" />
+        </mxCell>
+        <mxCell id="topic5" value="scraper-status" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f3e5f5;strokeColor=#4a148c;" vertex="1" parent="ingestion-group">
+          <mxGeometry x="100" y="165" width="80" height="25" as="geometry" />
+        </mxCell>
+
+        <!-- Couche de Traitement -->
+        <mxCell id="processing-group" value="" style="group" vertex="1" connectable="0" parent="1">
+          <mxGeometry x="730" y="40" width="350" height="200" as="geometry" />
+        </mxCell>
+        <mxCell id="processing-bg" value="⚙️ COUCHE DE TRAITEMENT" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e8f5e8;strokeColor=#1b5e20;strokeWidth=2;fontSize=14;fontStyle=1;" vertex="1" parent="processing-group">
+          <mxGeometry x="0" y="0" width="350" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="spark-title" value="Apache Spark Cluster" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=12;fontStyle=1;" vertex="1" parent="processing-group">
+          <mxGeometry x="10" y="50" width="150" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="spark-master" value="Spark Master&lt;br/&gt;Port: 7077&lt;br/&gt;UI: 8082" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e8f5e8;strokeColor=#1b5e20;" vertex="1" parent="processing-group">
+          <mxGeometry x="10" y="70" width="80" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="spark-worker1" value="Spark Worker 1&lt;br/&gt;UI: 8083" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e8f5e8;strokeColor=#1b5e20;" vertex="1" parent="processing-group">
+          <mxGeometry x="100" y="70" width="80" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="spark-worker2" value="Spark Worker 2&lt;br/&gt;UI: 8084" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e8f5f5;strokeColor=#1b5e20;" vertex="1" parent="processing-group">
+          <mxGeometry x="190" y="70" width="80" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="jobs-title" value="Types de Jobs" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=12;fontStyle=1;" vertex="1" parent="processing-group">
+          <mxGeometry x="10" y="130" width="100" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="spark-streaming" value="Spark Streaming&lt;br/&gt;Traitement temps réel" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e8f5e8;strokeColor=#1b5e20;" vertex="1" parent="processing-group">
+          <mxGeometry x="10" y="150" width="100" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="spark-batch" value="Spark Batch&lt;br/&gt;Traitements lourds" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e8f5e8;strokeColor=#1b5e20;" vertex="1" parent="processing-group">
+          <mxGeometry x="120" y="150" width="100" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="pyspark" value="PySpark&lt;br/&gt;Transformations" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e8f5e8;strokeColor=#1b5e20;" vertex="1" parent="processing-group">
+          <mxGeometry x="230" y="150" width="100" height="40" as="geometry" />
+        </mxCell>
+
+        <!-- Couche de Stockage -->
+        <mxCell id="storage-group" value="" style="group" vertex="1" connectable="0" parent="1">
+          <mxGeometry x="40" y="260" width="650" height="250" as="geometry" />
+        </mxCell>
+        <mxCell id="storage-bg" value="💾 COUCHE DE STOCKAGE" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff3e0;strokeColor=#e65100;strokeWidth=2;fontSize=14;fontStyle=1;" vertex="1" parent="storage-group">
+          <mxGeometry x="0" y="0" width="650" height="40" as="geometry" />
+        </mxCell>
+
+        <!-- Data Lake MinIO -->
+        <mxCell id="minio-group" value="" style="group" vertex="1" connectable="0" parent="storage-group">
+          <mxGeometry x="10" y="50" width="310" height="190" as="geometry" />
+        </mxCell>
+        <mxCell id="datalake-title" value="Data Lake (Local)" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=12;fontStyle=1;" vertex="1" parent="minio-group">
+          <mxGeometry x="10" y="0" width="120" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="minio" value="MinIO S3&lt;br/&gt;API: 9000&lt;br/&gt;Console: 9001" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff3e0;strokeColor=#e65100;" vertex="1" parent="minio-group">
+          <mxGeometry x="10" y="20" width="100" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="buckets-title" value="Buckets MinIO" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=11;fontStyle=1;" vertex="1" parent="minio-group">
+          <mxGeometry x="10" y="80" width="100" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="bucket1" value="datalake&lt;br/&gt;Données générales" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#fff3e0;strokeColor=#e65100;" vertex="1" parent="minio-group">
+          <mxGeometry x="10" y="100" width="90" height="35" as="geometry" />
+        </mxCell>
+        <mxCell id="bucket2" value="raw-data&lt;br/&gt;Données brutes" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#fff3e0;strokeColor=#e65100;" vertex="1" parent="minio-group">
+          <mxGeometry x="110" y="100" width="90" height="35" as="geometry" />
+        </mxCell>
+        <mxCell id="bucket3" value="processed-data&lt;br/&gt;Données traitées" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#fff3e0;strokeColor=#e65100;" vertex="1" parent="minio-group">
+          <mxGeometry x="210" y="100" width="90" height="35" as="geometry" />
+        </mxCell>
+        <mxCell id="bucket4" value="scraped-jobs&lt;br/&gt;HTML/PDF offres" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#fff3e0;strokeColor=#e65100;" vertex="1" parent="minio-group">
+          <mxGeometry x="10" y="140" width="90" height="35" as="geometry" />
+        </mxCell>
+        <mxCell id="bucket5" value="scraped-cvs&lt;br/&gt;CVs bruts" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#fff3e0;strokeColor=#e65100;" vertex="1" parent="minio-group">
+          <mxGeometry x="110" y="140" width="90" height="35" as="geometry" />
+        </mxCell>
+        <mxCell id="bucket6" value="backups&lt;br/&gt;Sauvegardes" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#fff3e0;strokeColor=#e65100;" vertex="1" parent="minio-group">
+          <mxGeometry x="210" y="140" width="90" height="35" as="geometry" />
+        </mxCell>
+
+        <!-- BigQuery -->
+        <mxCell id="bigquery-group" value="" style="group" vertex="1" connectable="0" parent="storage-group">
+          <mxGeometry x="330" y="50" width="310" height="190" as="geometry" />
+        </mxCell>
+        <mxCell id="warehouse-title" value="Data Warehouse (Cloud)" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=12;fontStyle=1;" vertex="1" parent="bigquery-group">
+          <mxGeometry x="10" y="0" width="150" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="bigquery" value="BigQuery&lt;br/&gt;GCP Free Tier&lt;br/&gt;10GB + 1TB queries/mois" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff3e0;strokeColor=#e65100;" vertex="1" parent="bigquery-group">
+          <mxGeometry x="10" y="20" width="120" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="tables-title" value="Tables BigQuery" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=11;fontStyle=1;" vertex="1" parent="bigquery-group">
+          <mxGeometry x="10" y="80" width="100" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="table1" value="fact_job_offers&lt;br/&gt;Offres d'emploi" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#fff3e0;strokeColor=#e65100;" vertex="1" parent="bigquery-group">
+          <mxGeometry x="10" y="100" width="90" height="35" as="geometry" />
+        </mxCell>
+        <mxCell id="table2" value="fact_candidates&lt;br/&gt;CVs candidats" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#fff3e0;strokeColor=#e65100;" vertex="1" parent="bigquery-group">
+          <mxGeometry x="110" y="100" width="90" height="35" as="geometry" />
+        </mxCell>
+        <mxCell id="table3" value="dim_skills&lt;br/&gt;Compétences" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#fff3e0;strokeColor=#e65100;" vertex="1" parent="bigquery-group">
+          <mxGeometry x="210" y="100" width="90" height="35" as="geometry" />
+        </mxCell>
+        <mxCell id="table4" value="dim_companies&lt;br/&gt;Entreprises" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#fff3e0;strokeColor=#e65100;" vertex="1" parent="bigquery-group">
+          <mxGeometry x="10" y="140" width="90" height="35" as="geometry" />
+        </mxCell>
+        <mxCell id="table5" value="dim_locations&lt;br/&gt;Localisations" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#fff3e0;strokeColor=#e65100;" vertex="1" parent="bigquery-group">
+          <mxGeometry x="110" y="140" width="90" height="35" as="geometry" />
+        </mxCell>
+        <mxCell id="table6" value="agg_matching&lt;br/&gt;Scores matching" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#fff3e0;strokeColor=#e65100;" vertex="1" parent="bigquery-group">
+          <mxGeometry x="210" y="140" width="90" height="35" as="geometry" />
+        </mxCell>
+
+        <!-- Couche d'Orchestration -->
+        <mxCell id="orchestration-group" value="" style="group" vertex="1" connectable="0" parent="1">
+          <mxGeometry x="710" y="260" width="350" height="150" as="geometry" />
+        </mxCell>
+        <mxCell id="orchestration-bg" value="🎯 COUCHE D'ORCHESTRATION" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fce4ec;strokeColor=#880e4f;strokeWidth=2;fontSize=14;fontStyle=1;" vertex="1" parent="orchestration-group">
+          <mxGeometry x="0" y="0" width="350" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="airflow" value="Apache Airflow&lt;br/&gt;Web: 8085&lt;br/&gt;Scheduler + Webserver" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fce4ec;strokeColor=#880e4f;" vertex="1" parent="orchestration-group">
+          <mxGeometry x="10" y="50" width="120" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="dags-title" value="Types de DAGs" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=12;fontStyle=1;" vertex="1" parent="orchestration-group">
+          <mxGeometry x="150" y="50" width="100" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="dag1" value="Scraping DAGs&lt;br/&gt;Collecte données" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fce4ec;strokeColor=#880e4f;" vertex="1" parent="orchestration-group">
+          <mxGeometry x="150" y="70" width="100" height="35" as="geometry" />
+        </mxCell>
+        <mxCell id="dag2" value="Processing DAGs&lt;br/&gt;Traitement Spark" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fce4ec;strokeColor=#880e4f;" vertex="1" parent="orchestration-group">
+          <mxGeometry x="260" y="70" width="100" height="35" as="geometry" />
+        </mxCell>
+        <mxCell id="dag3" value="Loading DAGs&lt;br/&gt;Chargement BQ" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fce4ec;strokeColor=#880e4f;" vertex="1" parent="orchestration-group">
+          <mxGeometry x="150" y="110" width="100" height="35" as="geometry" />
+        </mxCell>
+
+        <!-- Couche de Visualisation -->
+        <mxCell id="visualization-group" value="" style="group" vertex="1" connectable="0" parent="1">
+          <mxGeometry x="40" y="530" width="400" height="150" as="geometry" />
+        </mxCell>
+        <mxCell id="visualization-bg" value="📊 COUCHE DE VISUALISATION" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f1f8e9;strokeColor=#33691e;strokeWidth=2;fontSize=14;fontStyle=1;" vertex="1" parent="visualization-group">
+          <mxGeometry x="0" y="0" width="400" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="superset" value="Apache Superset&lt;br/&gt;Port: 8088&lt;br/&gt;BI Dashboards" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f1f8e9;strokeColor=#33691e;" vertex="1" parent="visualization-group">
+          <mxGeometry x="10" y="50" width="120" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="dashboards-title" value="Tableaux de Bord" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=12;fontStyle=1;" vertex="1" parent="visualization-group">
+          <mxGeometry x="150" y="50" width="120" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="dashboard1" value="Job Market Analysis" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f1f8e9;strokeColor=#33691e;" vertex="1" parent="visualization-group">
+          <mxGeometry x="150" y="70" width="100" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="dashboard2" value="Skills Trends" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f1f8e9;strokeColor=#33691e;" vertex="1" parent="visualization-group">
+          <mxGeometry x="260" y="70" width="100" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="dashboard3" value="Salary Analysis" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f1f8e9;strokeColor=#33691e;" vertex="1" parent="visualization-group">
+          <mxGeometry x="150" y="105" width="100" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="dashboard4" value="Candidate Matching" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f1f8e9;strokeColor=#33691e;" vertex="1" parent="visualization-group">
+          <mxGeometry x="260" y="105" width="100" height="30" as="geometry" />
+        </mxCell>
+
+        <!-- Services de Support -->
+        <mxCell id="support-group" value="" style="group" vertex="1" connectable="0" parent="1">
+          <mxGeometry x="460" y="530" width="600" height="150" as="geometry" />
+        </mxCell>
+        <mxCell id="support-bg" value="🔧 SERVICES DE SUPPORT" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fafafa;strokeColor=#424242;strokeWidth=2;fontSize=14;fontStyle=1;" vertex="1" parent="support-group">
+          <mxGeometry x="0" y="0" width="600" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="postgres" value="PostgreSQL&lt;br/&gt;Port: 5432&lt;br/&gt;Airflow + Superset" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fafafa;strokeColor=#424242;" vertex="1" parent="support-group">
+          <mxGeometry x="10" y="50" width="100" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="redis" value="Redis&lt;br/&gt;Port: 6379&lt;br/&gt;Cache" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fafafa;strokeColor=#424242;" vertex="1" parent="support-group">
+          <mxGeometry x="120" y="50" width="100" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="jupyter" value="Jupyter Lab&lt;br/&gt;Port: 8888&lt;br/&gt;Développement" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fafafa;strokeColor=#424242;" vertex="1" parent="support-group">
+          <mxGeometry x="230" y="50" width="100" height="50" as="geometry" />
+        </mxCell>
+
+        <!-- Connexions/Flèches -->
+        <mxCell id="arrow1" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=1;exitY=0.5;entryX=0;entryY=0.5;" edge="1" parent="1" source="scrapy" target="kafka-broker">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="arrow2" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=1;exitY=0.5;entryX=0;entryY=0.5;" edge="1" parent="1" source="spark-streaming" target="minio">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="arrow3" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=1;exitY=0.5;entryX=0;entryY=0.5;" edge="1" parent="1" source="airflow" target="bigquery">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="arrow4" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=1;exitY=0.5;entryX=0;entryY=0.5;" edge="1" parent="1" source="bigquery" target="superset">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="arrow5" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.5;exitY=1;entryX=0.5;entryY=0;" edge="1" parent="1" source="airflow" target="postgres">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="arrow6" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.5;exitY=1;entryX=0.5;entryY=0;" edge="1" parent="1" source="superset" target="postgres">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
