@@ -46,6 +46,9 @@ RUN pip install --no-cache-dir --upgrade pip && \
 # Télécharger le modèle spaCy français
 RUN pip install https://github.com/explosion/spacy-models/releases/download/fr_core_news_md-3.7.0/fr_core_news_md-3.7.0-py3-none-any.whl
 
+#BigQuery
+RUN pip install google-cloud-bigquery google-auth
+
 # Télécharger les données NLTK
 RUN python -m nltk.downloader punkt stopwords wordnet
 

@@ -5,11 +5,13 @@
 
 FROM apache/superset:latest
 
-# Installer les dépendances système et PostgreSQL
+# Installer les dépendances GCP
 USER root
 RUN apt-get update && \
     apt-get install -y gcc python3-dev && \
     pip install psycopg2-binary && \
+    pip install google-cloud-bigquery && \
+    pip install google-auth && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 
