@@ -115,24 +115,55 @@ Ouvrir http://localhost:9001 et vérifier que les buckets sont créés :
 
 Ouvrir Jupyter : http://localhost:8888 (token: bigdata2024)
 
+**⚠️ Important** : Si vous utilisez le conteneur Jupyter Docker, utilisez les noms de conteneurs (`minio`, `spark-master`). Si vous utilisez Jupyter localement, utilisez `localhost`.
+
 Créer un nouveau notebook et exécuter :
 
 ```python
 from pyspark.sql import SparkSession
+from pyspark import SparkContext
+import time
+
+# Nettoyage des contextes Spark existants (évite les conflits)
+print("🧹 Nettoyage des contextes Spark existants...")
+try:
+    if SparkContext._active_spark_context is not None:
+        SparkContext._active_spark_context.stop()
+        SparkContext._active_spark_context = None
+except:
+    pass
+
+time.sleep(2)
 
 # Créer session Spark avec MinIO
+# ⚠️ Les packages S3A sont nécessaires pour se connecter à MinIO
+print("🚀 Création d'une session Spark en mode LOCAL...")
+print("⏳ Téléchargement des dépendances S3A (1-2 minutes la première fois)...")
+
+# Depuis le conteneur Jupyter Docker, utilisez :
+# - http://minio:9000 (nom du conteneur)
+# - master("local[2]") pour les tests (ou "spark://spark-master:7077" pour le cluster)
+
 spark = SparkSession.builder \
     .appName("TestMinIO") \
+    .config("spark.jars.packages", 
+            "org.apache.hadoop:hadoop-aws:3.3.4,"
+            "org.apache.hadoop:hadoop-common:3.3.4,"
+            "com.amazonaws:aws-java-sdk-bundle:1.12.262") \
     .config("spark.hadoop.fs.s3a.endpoint", "http://minio:9000") \
     .config("spark.hadoop.fs.s3a.access.key", "minioadmin") \
     .config("spark.hadoop.fs.s3a.secret.key", "minioadmin123") \
     .config("spark.hadoop.fs.s3a.path.style.access", "true") \
     .config("spark.hadoop.fs.s3a.connection.ssl.enabled", "false") \
     .config("spark.hadoop.fs.s3a.impl", "org.apache.hadoop.fs.s3a.S3AFileSystem") \
-    .master("spark://spark-master:7077") \
+    .config("spark.hadoop.fs.s3a.aws.credentials.provider", "org.apache.hadoop.fs.s3a.SimpleAWSCredentialsProvider") \
+    .master("local[2]") \
     .getOrCreate()
 
+print("✅ Session Spark créée avec succès!")
+
 # Créer un DataFrame de test
+print("\n📊 Création du DataFrame...")
 data = [
     ("Data Engineer", "Paris", 50000),
     ("Data Scientist", "Lyon", 55000),
@@ -142,21 +173,52 @@ columns = ["job_title", "location", "salary"]
 df = spark.createDataFrame(data, columns)
 
 # Afficher
+print("\n📊 DataFrame créé:")
 df.show()
 
 # Écrire dans MinIO
-df.write.mode("overwrite").parquet("s3a://datalake/test/jobs.parquet")
+print("\n💾 Écriture dans MinIO (s3a://datalake/test/jobs.parquet)...")
+print("⏳ Cela peut prendre quelques secondes...")
 
-print("✅ Données écrites dans MinIO!")
+try:
+    df.write.mode("overwrite").parquet("s3a://datalake/test/jobs.parquet")
+    print("✅ Données écrites dans MinIO!")
+except Exception as e:
+    print(f"❌ Erreur écriture: {e}")
+    raise
 
 # Relire depuis MinIO
-df_read = spark.read.parquet("s3a://datalake/test/jobs.parquet")
-df_read.show()
+print("\n📖 Lecture depuis MinIO...")
+try:
+    df_read = spark.read.parquet("s3a://datalake/test/jobs.parquet")
+    print("✅ Données lues depuis MinIO!")
+    df_read.show()
+except Exception as e:
+    print(f"❌ Erreur lecture: {e}")
+    raise
 
-print("✅ Données lues depuis MinIO!")
+print("\n🎉 Test réussi! Spark + MinIO fonctionnent correctement!")
 
-spark.stop()
+# Note: Ne pas appeler spark.stop() si vous voulez réutiliser la session
+# spark.stop()
 ```
+
+**Résultat attendu** :
+- ✅ Session Spark créée
+- ✅ DataFrame affiché avec 3 lignes
+- ✅ Message "✅ Données écrites dans MinIO!"
+- ✅ Message "✅ Données lues depuis MinIO!"
+- ✅ DataFrame relu depuis MinIO
+
+**Vérification dans MinIO UI** :
+1. Ouvrir http://localhost:9001
+2. Login : `minioadmin` / `minioadmin123`
+3. Aller dans le bucket `datalake` → `test/jobs.parquet/`
+4. Vous devriez voir les fichiers `.parquet` créés
+
+**Note** : Si vous utilisez Jupyter localement (pas dans Docker), remplacez :
+- `http://minio:9000` → `http://localhost:9000`
+- `master("local[2]")` reste le même
 
 ### 4. Tester Superset
 

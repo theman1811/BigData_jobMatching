@@ -350,7 +350,7 @@ import os
 if __name__ == '__main__':
     scraper = IndeedScraper(
         kafka_servers=os.getenv('KAFKA_BOOTSTRAP_SERVERS', 'kafka:29092'),
-        minio_endpoint=os.getenv('MINIO_ENDPOINT', 'minio:9000')
+        minio_endpoint=os.getenv('MINIO_ENDPOINT', 'http://minio:9000')
     )
     
     jobs = scraper.scrape(
