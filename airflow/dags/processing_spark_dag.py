@@ -3,6 +3,8 @@ from airflow import DAG
 from airflow.operators.python import PythonOperator
 from airflow.providers.apache.spark.operators.spark_submit import SparkSubmitOperator
 from airflow.sensors.external_task import ExternalTaskSensor
+from pathlib import Path
+import json
 import os
 
 default_args = {
@@ -29,6 +31,8 @@ dag = DAG(
 PROJECT_ROOT = "/opt/airflow/project"  # À adapter selon le montage Docker
 SPARK_APP_PATH = f"{PROJECT_ROOT}/spark/batch"
 SCRIPTS_PATH = f"{PROJECT_ROOT}/scripts/spark"
+PROCESSED_DATA_DIR = Path(os.getenv("PROCESSED_DATA_DIR", f"{PROJECT_ROOT}/data/processed"))
+STRICT_VALIDATION = os.getenv("PROCESSING_VALIDATION_STRICT", "false").lower() == "true"
 
 # Configuration commune Spark
 SPARK_CONF = {
@@ -48,13 +52,40 @@ SPARK_ENV_VARS = {
     'GOOGLE_APPLICATION_CREDENTIALS': '/opt/airflow/credentials/bq-service-account.json'
 }
 
-def check_processing_quality():
-    """Vérifie la qualité du processing"""
-    # TODO: Implémenter vérifications
-    # - Vérifier nombre d'offres traitées
-    # - Taux de succès des extractions
-    # - Cohérence des données
-    print("✅ Vérification qualité du processing (TODO: implémenter)")
+def check_processing_quality(**context):
+    """Contrôle basique des sorties de processing.
+
+    Vérifie la présence des répertoires de sortie clés. En mode strict
+    (PROCESSING_VALIDATION_STRICT=true), l'absence d'un répertoire obligatoire
+    fait échouer la tâche.
+    """
+    expected_dirs = {
+        "jobs_parsed": True,
+        "jobs": False,              # parquet streaming
+        "skills_enriched": False,   # si étape d'enrichissement
+        "salaries_enriched": False,
+        "deduplicated": False,
+        "sectors_enriched": False,
+    }
+
+    if not PROCESSED_DATA_DIR.exists():
+        msg = f"Répertoire de données traitées introuvable: {PROCESSED_DATA_DIR}"
+        if STRICT_VALIDATION:
+            raise FileNotFoundError(msg)
+        print(f"⚠️ {msg}")
+        return
+
+    stats = {}
+    for folder, required in expected_dirs.items():
+        path = PROCESSED_DATA_DIR / folder
+        file_count = len([p for p in path.rglob("*.parquet")]) if path.exists() else 0
+        stats[folder] = {"required": required, "files": file_count}
+
+        if required and file_count == 0 and STRICT_VALIDATION:
+            raise ValueError(f"Aucune sortie détectée pour {folder}")
+
+    print("📊 Statistiques processing:")
+    print(json.dumps(stats, indent=2, ensure_ascii=False))
 
 # ============================================
 # JOBS SPARK BATCH (séquentiels)

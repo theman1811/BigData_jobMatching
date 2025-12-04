@@ -4,6 +4,8 @@ from airflow.operators.bash import BashOperator
 from airflow.operators.python import PythonOperator
 from airflow.sensors.external_task import ExternalTaskSensor
 from airflow.utils.state import DagRunState
+from pathlib import Path
+import json
 import os
 
 default_args = {
@@ -27,21 +29,49 @@ dag = DAG(
 )
 
 # Variables d'environnement
-PROJECT_ROOT = "/opt/airflow/project"  # À adapter selon le montage Docker
+# Le volume du projet est monté sous /opt/airflow (voir docker-compose)
+PROJECT_ROOT = "/opt/airflow"
 SCRAPERS_SCRIPT = f"{PROJECT_ROOT}/kafka/producers/run_scraper.py"
+SCRAPED_OUTPUT_DIR = os.getenv("SCRAPED_OUTPUT_DIR", f"{PROJECT_ROOT}/data/scraped")
+STRICT_VALIDATION = os.getenv("SCRAPED_VALIDATION_STRICT", "false").lower() == "true"
 
-def check_data_quality():
-    """Vérifie la qualité des données scrapées"""
-    # TODO: Implémenter vérification qualité
-    # - Vérifier nombre d'offres par source
-    # - Vérifier format des données
-    # - Vérifier taux d'erreur
-    print("✅ Vérification qualité des données (TODO: implémenter)")
+def check_data_quality(**context):
+    """Vérifie la présence minimale de données scrapées par source.
 
-def notify_completion():
-    """Notification de fin de scraping"""
-    # TODO: Implémenter notification (email, Slack, etc.)
-    print("✅ Scraping terminé avec succès")
+    Si STRICT_VALIDATION=true, les sources obligatoires (hors LinkedIn) doivent
+    contenir au moins un fichier sinon la tâche échoue.
+    """
+    sources = {
+        "educarriere": True,
+        "macarrierepro": True,
+        "emploi_ci": True,
+        "linkedin": False,  # optionnel
+    }
+
+    base_path = Path(SCRAPED_OUTPUT_DIR)
+    stats = {}
+
+    if not base_path.exists():
+        msg = f"Répertoire de scraping introuvable: {base_path}"
+        if STRICT_VALIDATION:
+            raise FileNotFoundError(msg)
+        print(f"⚠️ {msg}")
+        return
+
+    for source, required in sources.items():
+        source_dir = base_path / source
+        file_count = len([f for f in source_dir.rglob("*") if f.is_file()]) if source_dir.exists() else 0
+        stats[source] = {"required": required, "files": file_count}
+
+        if required and file_count == 0 and STRICT_VALIDATION:
+            raise ValueError(f"Aucune donnée trouvée pour la source obligatoire: {source}")
+
+    print("📊 Statistiques scraping:")
+    print(json.dumps(stats, indent=2, ensure_ascii=False))
+
+def notify_completion(**context):
+    """Notification simple de fin de scraping."""
+    print("✅ Scraping terminé avec succès - toutes les tâches amont sont terminées.")
 
 # ============================================
 # TÂCHES DE SCRAPING
@@ -50,7 +80,7 @@ def notify_completion():
 # 1. Scraper Educarriere
 scrape_educarriere = BashOperator(
     task_id='scrape_educarriere',
-    bash_command=f'cd {PROJECT_ROOT}/kafka/producers && python run_scraper.py --source educarriere',
+    bash_command=f'cd {PROJECT_ROOT}/kafka/producers && python run_scraper.py --scraper educarriere',
     dag=dag,
     execution_timeout=timedelta(hours=1)
 )
@@ -58,7 +88,7 @@ scrape_educarriere = BashOperator(
 # 2. Scraper Macarrierepro
 scrape_macarrierepro = BashOperator(
     task_id='scrape_macarrierepro',
-    bash_command=f'cd {PROJECT_ROOT}/kafka/producers && python run_scraper.py --source macarrierepro',
+    bash_command=f'cd {PROJECT_ROOT}/kafka/producers && python run_scraper.py --scraper macarrierepro',
     dag=dag,
     execution_timeout=timedelta(hours=1)
 )
@@ -66,7 +96,7 @@ scrape_macarrierepro = BashOperator(
 # 3. Scraper Emploi.ci
 scrape_emploi_ci = BashOperator(
     task_id='scrape_emploi_ci',
-    bash_command=f'cd {PROJECT_ROOT}/kafka/producers && python run_scraper.py --source emploi_ci',
+    bash_command=f'cd {PROJECT_ROOT}/kafka/producers && python run_scraper.py --scraper emploi_ci',
     dag=dag,
     execution_timeout=timedelta(hours=1)
 )
@@ -74,7 +104,7 @@ scrape_emploi_ci = BashOperator(
 # 4. Scraper LinkedIn (optionnel - peut échouer)
 scrape_linkedin = BashOperator(
     task_id='scrape_linkedin',
-    bash_command=f'cd {PROJECT_ROOT}/kafka/producers && python run_scraper.py --source linkedin || echo "LinkedIn scraping failed, continuing..."',
+    bash_command=f'cd {PROJECT_ROOT}/kafka/producers && python run_scraper.py --scraper linkedin || echo "LinkedIn scraping failed, continuing..."',
     dag=dag,
     execution_timeout=timedelta(hours=2)
 )

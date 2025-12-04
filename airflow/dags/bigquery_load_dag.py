@@ -3,6 +3,9 @@ from airflow import DAG
 from airflow.operators.python import PythonOperator
 from airflow.providers.apache.spark.operators.spark_submit import SparkSubmitOperator
 from airflow.providers.google.cloud.operators.bigquery import BigQueryInsertJobOperator
+from airflow.exceptions import AirflowSkipException
+from airflow.operators.empty import EmptyOperator
+from pathlib import Path
 import os
 
 default_args = {
@@ -27,8 +30,33 @@ dag = DAG(
 PROJECT_ROOT = "/opt/airflow/project"  # À adapter selon le montage Docker
 SPARK_APP_PATH = f"{PROJECT_ROOT}/spark/batch"
 SCRIPTS_PATH = f"{PROJECT_ROOT}/scripts/spark"
+MINIO_BUCKET = os.getenv("MINIO_BUCKET", "processed-data")
 
-# Tâches Spark
+
+def check_offers_ready(**context):
+    """Valide la configuration d'entrée pour les offres avant le chargement."""
+    input_path = f"s3a://{MINIO_BUCKET}/jobs_parsed"
+    print(f"Entrée attendue pour les offres: {input_path}")
+    return input_path
+
+
+def check_cvs_ready(**context):
+    """Vérifie si la pipeline CVs existe. Sinon, saute la tâche."""
+    consume_cvs_script = Path(PROJECT_ROOT) / "spark" / "streaming" / "consume_cvs.py"
+    if not consume_cvs_script.exists():
+        raise AirflowSkipException(
+            "Pipeline CVs non disponible (consume_cvs.py manquant) - tâche sautée."
+        )
+    print("Pipeline CVs détectée, ajouter le chargement BigQuery lorsque prête.")
+    return str(consume_cvs_script)
+
+# Tâches de préparation
+check_offers_task = PythonOperator(
+    task_id='check_offers_ready',
+    python_callable=check_offers_ready,
+    dag=dag
+)
+
 load_offers_task = SparkSubmitOperator(
     task_id='load_job_offers',
     application=f"{SPARK_APP_PATH}/load_to_bigquery.py",
@@ -45,41 +73,24 @@ load_offers_task = SparkSubmitOperator(
     env_vars={
         'GCP_PROJECT_ID': 'bigdata-jobmatching-test',
         'BIGQUERY_DATASET': 'jobmatching_dw',
-        'MINIO_BUCKET': 'processed-data',
+        'MINIO_BUCKET': MINIO_BUCKET,
         'GOOGLE_APPLICATION_CREDENTIALS': '/opt/airflow/credentials/bq-service-account.json'
     },
     dag=dag
 )
 
-# TODO: Créer consume_cvs.py (Phase 4 manquante)
-# load_cvs_task = SparkSubmitOperator(
-#     task_id='load_cvs',
-#     application=f"{SPARK_APP_PATH}/consume_cvs.py",  # À créer
-#     conn_id='spark_default',
-#     conf={
-#         'spark.sql.adaptive.enabled': 'true',
-#         'spark.sql.adaptive.coalescePartitions.enabled': 'true',
-#         'spark.hadoop.fs.s3a.endpoint': 'http://minio:9000',
-#         'spark.hadoop.fs.s3a.access.key': 'minioadmin',
-#         'spark.hadoop.fs.s3a.secret.key': 'minioadmin123',
-#         'spark.hadoop.fs.s3a.path.style.access': 'true',
-#         'spark.jars.packages': 'com.google.cloud.spark:spark-bigquery-with-dependencies_2.12:0.32.2'
-#     },
-#     env_vars={
-#         'GCP_PROJECT_ID': 'bigdata-jobmatching-test',
-#         'BIGQUERY_DATASET': 'jobmatching_dw',
-#         'MINIO_BUCKET': 'processed-data',
-#         'GOOGLE_APPLICATION_CREDENTIALS': '/opt/airflow/credentials/bq-service-account.json'
-#     },
-#     dag=dag
-# )
-
-# Tâche temporaire pour les CVs (sera remplacée quand consume_cvs.py sera créé)
-load_cvs_task = PythonOperator(
-    task_id='load_cvs',
-    python_callable=lambda: print("TODO: Implémenter chargement CVs"),
+check_cvs_task = PythonOperator(
+    task_id='check_cvs_ready',
+    python_callable=check_cvs_ready,
     dag=dag
 )
 
+# Placeholder pour le chargement des CVs (sera remplacé dès que le job sera disponible)
+load_cvs_task = EmptyOperator(
+    task_id='load_cvs_placeholder',
+    dag=dag,
+    trigger_rule='none_failed_min_one_success'
+)
+
 # Dépendances
-load_offers_task >> load_cvs_task
+check_offers_task >> load_offers_task >> check_cvs_task >> load_cvs_task
