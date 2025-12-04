@@ -21,7 +21,7 @@ class MacarriereproScraper(BaseJobScraperCI):
     """Scraper pour Macarrierepro.net - Plateforme moderne d'emploi ivoirienne"""
 
     BASE_URL = "https://macarrierepro.net"
-    OFFERS_URL = "https://macarrierepro.net/"
+    OFFERS_URL = "https://macarrierepro.net/poste/"
 
     # Mapping des catégories vers des compétences
     CATEGORY_SKILLS_MAPPING = {

@@ -176,10 +176,11 @@ Implémenter les scrapers pour collecter les offres d'emploi depuis les sites iv
    - Données : Salaires en FCFA
    - Fichier : `kafka/producers/scrapers/macarrierepro_scraper.py`
 
-3. **EmploiCIScraper** ✅
-   - Site : `emploi.ci`
-   - Volume : **500-1000 offres**
+3. **EmploiCIScraper** ✅ (remplacé par GoAfricaOnline)
+   - Site cible actuel : `goafricaonline.com/ci/emploi` (Emploi.ci indisponible)
+   - Volume : **500-1000 offres estimées**
    - Fichier : `kafka/producers/scrapers/emploi_ci_scraper.py`
+   - Test Docker (2025-12-04) : run limité à 2 pages → 2 offres envoyées Kafka, 0 erreur
 
 4. **LinkedInScraper** ✅
    - Site : LinkedIn (filtre Côte d'Ivoire)
