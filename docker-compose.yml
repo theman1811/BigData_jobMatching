@@ -182,11 +182,16 @@ services:
       - AWS_ACCESS_KEY_ID=minioadmin
       - AWS_SECRET_ACCESS_KEY=minioadmin123
       - AWS_REGION=us-east-1
+      # BigQuery / GCP
+      - GCP_PROJECT_ID=${GCP_PROJECT_ID:-noble-anvil-479619-h9}
+      - BIGQUERY_DATASET=${BIGQUERY_DATASET:-jobmatching_dw}
+      - GOOGLE_APPLICATION_CREDENTIALS=/opt/spark/credentials/bq-service-account.json
     volumes:
       - ./spark:/opt/spark-apps
       - ./data:/opt/spark-data
       - ./config/spark-defaults.conf:/opt/spark/conf/spark-defaults.conf:ro
       - spark_master_data:/tmp/spark-events
+      - ./credentials/gcp-service-account.json:/opt/spark/credentials/bq-service-account.json:ro
     networks:
       - bigdata_network
     restart: unless-stopped
@@ -215,12 +220,17 @@ services:
       - AWS_ACCESS_KEY_ID=minioadmin
       - AWS_SECRET_ACCESS_KEY=minioadmin123
       - AWS_REGION=us-east-1
+      # BigQuery / GCP
+      - GCP_PROJECT_ID=${GCP_PROJECT_ID:-noble-anvil-479619-h9}
+      - BIGQUERY_DATASET=${BIGQUERY_DATASET:-jobmatching_dw}
+      - GOOGLE_APPLICATION_CREDENTIALS=/opt/spark/credentials/bq-service-account.json
     volumes:
       - ./spark:/opt/spark-apps
       - ./data:/opt/spark-data
       - ./config/spark-defaults.conf:/opt/spark/conf/spark-defaults.conf:ro
       - spark_worker_1_data:/tmp/spark
       - spark_worker_1_work:/opt/spark/work
+      - ./credentials/gcp-service-account.json:/opt/spark/credentials/bq-service-account.json:ro
     networks:
       - bigdata_network
     restart: unless-stopped
@@ -249,12 +259,17 @@ services:
       - AWS_ACCESS_KEY_ID=minioadmin
       - AWS_SECRET_ACCESS_KEY=minioadmin123
       - AWS_REGION=us-east-1
+      # BigQuery / GCP
+      - GCP_PROJECT_ID=${GCP_PROJECT_ID:-noble-anvil-479619-h9}
+      - BIGQUERY_DATASET=${BIGQUERY_DATASET:-jobmatching_dw}
+      - GOOGLE_APPLICATION_CREDENTIALS=/opt/spark/credentials/bq-service-account.json
     volumes:
       - ./spark:/opt/spark-apps
       - ./data:/opt/spark-data
       - ./config/spark-defaults.conf:/opt/spark/conf/spark-defaults.conf:ro
       - spark_worker_2_data:/tmp/spark
       - spark_worker_2_work:/opt/spark/work
+      - ./credentials/gcp-service-account.json:/opt/spark/credentials/bq-service-account.json:ro
     networks:
       - bigdata_network
     restart: unless-stopped
@@ -340,6 +355,14 @@ services:
       AWS_SECRET_ACCESS_KEY: minioadmin123
       AWS_DEFAULT_REGION: us-east-1
       MINIO_ENDPOINT: http://minio:9000
+      # BigQuery / GCP
+      GCP_PROJECT_ID: ${GCP_PROJECT_ID:-noble-anvil-479619-h9}
+      BIGQUERY_DATASET: ${BIGQUERY_DATASET:-jobmatching_dw}
+      GOOGLE_APPLICATION_CREDENTIALS: /opt/airflow/credentials/bq-service-account.json
+      # Airflow connections
+      AIRFLOW_CONN_SPARK_DEFAULT: "spark://spark-master:7077?extra__spark__master=spark%3A%2F%2Fspark-master%3A7077"
+      # Java pour spark-submit
+      JAVA_HOME: /usr/lib/jvm/java-17-openjdk-arm64
     volumes:
       - ./airflow/dags:/opt/airflow/dags
       - ./airflow/plugins:/opt/airflow/plugins
@@ -347,6 +370,7 @@ services:
       - ./data:/opt/airflow/data
       - ./spark:/opt/airflow/spark
       - ./kafka:/opt/airflow/kafka
+      - ./credentials/gcp-service-account.json:/opt/airflow/credentials/bq-service-account.json:ro
     networks:
       - bigdata_network
     restart: unless-stopped
@@ -384,6 +408,14 @@ services:
       AWS_SECRET_ACCESS_KEY: minioadmin123
       AWS_DEFAULT_REGION: us-east-1
       MINIO_ENDPOINT: http://minio:9000
+      # BigQuery / GCP
+      GCP_PROJECT_ID: ${GCP_PROJECT_ID:-noble-anvil-479619-h9}
+      BIGQUERY_DATASET: ${BIGQUERY_DATASET:-jobmatching_dw}
+      GOOGLE_APPLICATION_CREDENTIALS: /opt/airflow/credentials/bq-service-account.json
+      # Airflow connections
+      AIRFLOW_CONN_SPARK_DEFAULT: "spark://spark-master:7077?extra__spark__master=spark%3A%2F%2Fspark-master%3A7077"
+      # Java pour spark-submit
+      JAVA_HOME: /usr/lib/jvm/java-17-openjdk-arm64
     volumes:
       - ./airflow/dags:/opt/airflow/dags
       - ./airflow/plugins:/opt/airflow/plugins
@@ -391,6 +423,7 @@ services:
       - ./data:/opt/airflow/data
       - ./spark:/opt/airflow/spark
       - ./kafka:/opt/airflow/kafka
+      - ./credentials/gcp-service-account.json:/opt/airflow/credentials/bq-service-account.json:ro
     networks:
       - bigdata_network
     restart: unless-stopped
@@ -421,10 +454,19 @@ services:
       _AIRFLOW_WWW_USER_USERNAME: airflow
       _AIRFLOW_WWW_USER_PASSWORD: airflow
       _PIP_ADDITIONAL_REQUIREMENTS: "apache-airflow-providers-apache-spark==4.5.0 apache-airflow-providers-google==10.12.0 kafka-python confluent-kafka"
+      # BigQuery / GCP
+      GCP_PROJECT_ID: ${GCP_PROJECT_ID:-noble-anvil-479619-h9}
+      BIGQUERY_DATASET: ${BIGQUERY_DATASET:-jobmatching_dw}
+      GOOGLE_APPLICATION_CREDENTIALS: /opt/airflow/credentials/bq-service-account.json
+      # Airflow connections
+      AIRFLOW_CONN_SPARK_DEFAULT: "spark://spark-master:7077?extra__spark__master=spark%3A%2F%2Fspark-master%3A7077"
+      # Java pour spark-submit
+      JAVA_HOME: /usr/lib/jvm/java-17-openjdk-arm64
     volumes:
       - ./airflow/dags:/opt/airflow/dags
       - ./airflow/plugins:/opt/airflow/plugins
       - ./airflow/logs:/opt/airflow/logs
+      - ./credentials/gcp-service-account.json:/opt/airflow/credentials/bq-service-account.json:ro
     networks:
       - bigdata_network
     entrypoint: /bin/bash

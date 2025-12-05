@@ -5,6 +5,7 @@ from airflow.providers.apache.spark.operators.spark_submit import SparkSubmitOpe
 from airflow.providers.google.cloud.operators.bigquery import BigQueryInsertJobOperator
 from airflow.exceptions import AirflowSkipException
 from airflow.operators.empty import EmptyOperator
+from airflow.models import Variable
 from pathlib import Path
 import os
 
@@ -26,11 +27,19 @@ dag = DAG(
     catchup=False
 )
 
-# Variables d'environnement
-PROJECT_ROOT = "/opt/airflow/project"  # À adapter selon le montage Docker
+# Variables d'environnement / Airflow Variables
+# Par défaut, le projet est monté dans /opt/airflow
+PROJECT_ROOT = os.getenv("PROJECT_ROOT", "/opt/airflow")
 SPARK_APP_PATH = f"{PROJECT_ROOT}/spark/batch"
 SCRIPTS_PATH = f"{PROJECT_ROOT}/scripts/spark"
-MINIO_BUCKET = os.getenv("MINIO_BUCKET", "processed-data")
+
+MINIO_BUCKET = Variable.get("MINIO_BUCKET", default_var=os.getenv("MINIO_BUCKET", "processed-data"))
+GCP_PROJECT_ID = Variable.get("GCP_PROJECT_ID", default_var=os.getenv("GCP_PROJECT_ID", "noble-anvil-479619-h9"))
+BIGQUERY_DATASET = Variable.get("BIGQUERY_DATASET", default_var=os.getenv("BIGQUERY_DATASET", "jobmatching_dw"))
+GOOGLE_CREDS = Variable.get(
+    "GOOGLE_APPLICATION_CREDENTIALS",
+    default_var=os.getenv("GOOGLE_APPLICATION_CREDENTIALS", "/opt/airflow/credentials/bq-service-account.json")
+)
 
 
 def check_offers_ready(**context):
@@ -71,10 +80,10 @@ load_offers_task = SparkSubmitOperator(
         'spark.jars.packages': 'com.google.cloud.spark:spark-bigquery-with-dependencies_2.12:0.32.2'
     },
     env_vars={
-        'GCP_PROJECT_ID': 'bigdata-jobmatching-test',
-        'BIGQUERY_DATASET': 'jobmatching_dw',
+        'GCP_PROJECT_ID': GCP_PROJECT_ID,
+        'BIGQUERY_DATASET': BIGQUERY_DATASET,
         'MINIO_BUCKET': MINIO_BUCKET,
-        'GOOGLE_APPLICATION_CREDENTIALS': '/opt/airflow/credentials/bq-service-account.json'
+        'GOOGLE_APPLICATION_CREDENTIALS': GOOGLE_CREDS
     },
     dag=dag
 )
