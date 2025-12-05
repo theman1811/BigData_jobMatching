@@ -513,9 +513,11 @@ services:
       REDIS_HOST: redis
       REDIS_PORT: 6379
       SUPERSET_LOAD_EXAMPLES: 'no'
+      GOOGLE_APPLICATION_CREDENTIALS: /opt/airflow/credentials/bq-service-account.json
     volumes:
       - superset_home:/app/superset_home
       - ./config/superset_config.py:/app/pythonpath/superset_config.py
+      - ./credentials/gcp-service-account.json:/opt/airflow/credentials/bq-service-account.json:ro
     networks:
       - bigdata_network
     restart: unless-stopped
@@ -551,8 +553,10 @@ services:
       DATABASE_PORT: 5432
       DATABASE_DIALECT: postgresql
       PYTHONPATH: /usr/local/lib/python3.10/site-packages:$PYTHONPATH
+      GOOGLE_APPLICATION_CREDENTIALS: /opt/airflow/credentials/bq-service-account.json
     volumes:
       - superset_home:/app/superset_home
+      - ./credentials/gcp-service-account.json:/opt/airflow/credentials/bq-service-account.json:ro
     networks:
       - bigdata_network
     command: >

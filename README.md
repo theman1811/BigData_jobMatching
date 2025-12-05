@@ -113,6 +113,42 @@ chmod +x start.sh stop.sh status.sh clean.sh
 | **Superset** | http://localhost:8088 | user: `admin`<br>pass: `admin` |
 | **Jupyter** | http://localhost:8888 | token: `bigdata2024` |
 
+## 📊 Phase 6 - Superset (BigQuery)
+
+0) Se connecter à GCP via Docker (service account) :
+```bash
+docker run --platform=linux/amd64 --rm \
+  -v "$PWD":/work \
+  -v "$PWD/credentials/gcp-service-account.json":/sa.json \
+  -w /work google/cloud-sdk:alpine \
+  sh -c 'gcloud auth activate-service-account --key-file=/sa.json --project=<PROJECT_ID> && echo "GCP auth OK"'
+```
+
+1) Créer les vues BigQuery dédiées aux dashboards :
+```bash
+bq query --use_legacy_sql=false < bigquery/queries/superset_views.sql
+```
+
+2) Ajouter la connexion BigQuery dans Superset (UI)  
+`bigquery://<project_id>/?credentials_path=/opt/airflow/credentials/bq-service-account.json`
+
+3) Publier ces datasets dans Superset :
+- `jobmatching_dw.v_offres_daily` (date, source, secteur, localisation, contrat, salaires)
+- `jobmatching_dw.v_top_competences` (competences, secteur, localisation, source, date)
+- `jobmatching_dw.v_salaires_secteur_ville` (moyennes + p50 par secteur/ville)
+- `jobmatching_dw.v_geo_offres` (lat/long pour cartes)
+
+4) Dashboards recommandés (ordre de livraison) :
+- Marché de l’Emploi : courbe offres/jour, top compétences, carte, salaires
+- Tendances Salariales : évolution, comparaisons villes, salaire vs expérience (si dispo)
+- Analyse Compétences : émergentes, combinaisons, demande par secteur
+- Matching (quand prêt) : scores, meilleures recommandations
+
+5) Performance/UX :
+- Cache Superset activé (Redis) ; ajuster TTL si besoin
+- Colonnes date marquées dans chaque dataset pour le time grain
+- Filtres globaux conseillés : date, source, secteur, localisation
+
 ## 📁 Structure du Projet
 
 ```

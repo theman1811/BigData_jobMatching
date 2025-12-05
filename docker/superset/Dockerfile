@@ -12,6 +12,8 @@ RUN apt-get update && \
     pip install psycopg2-binary && \
     pip install google-cloud-bigquery && \
     pip install google-auth && \
+    pip install pybigquery sqlalchemy-bigquery && \
+    pip install "sqlalchemy<2.0" && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 

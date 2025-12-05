@@ -42,10 +42,10 @@ Web Scraping → Kafka KRaft → Spark → MinIO → BigQuery → Superset
 | **Phase 3** | Implémentation Scrapers | ✅ **FAIT** | **100%** | - |
 | **Phase 4** | Jobs Spark | ✅ **COMPLÈTE** | **~88%** | 🟡 **EN PROGRÈS** |
 | **Phase 5** | DAGs Airflow (scope jobs) | ✅ **FAIT** | **100%** | 🟢 Stable |
-| **Phase 6** | Dashboards Superset | ❌ **À FAIRE** | **0%** | 🟡 Moyenne |
+| **Phase 6** | Dashboards Superset | 🟡 **EN COURS** | **~25%** | 🟡 Moyenne |
 | **Phase 7** | Tests E2E & Documentation | ❌ **À FAIRE** | **0%** | 🟢 Basse |
 
-**Progression globale :** **~90%** complété
+**Progression globale :** **~91%** complété
 
 ---
 
@@ -458,25 +458,29 @@ Créer les DAGs Airflow pour orchestrer le pipeline complet :
 
 ---
 
-## ❌ Phase 6 : Dashboards Superset (0% - À FAIRE)
+## 🟡 Phase 6 : Dashboards Superset (~25% - EN COURS)
 
 ### Objectif
 Créer les dashboards Superset pour visualiser les données du marché de l'emploi ivoirien.
 
 ### À Créer
 
-#### 1. Configuration Connexion BigQuery
-- [ ] Ajouter connexion BigQuery dans Superset
-- [ ] Tester connexion
-- [ ] Créer datasets :
-  - `fact_offres_emploi`
-  - `fact_cvs`
-  - `dim_entreprise`
-  - `dim_localisation`
-  - `dim_competence`
-  - `agg_matching_scores` (à créer)
+#### 1. Connexion BigQuery & Drivers
+- [x] Installer/ajuster les drivers BQ dans l’image Superset (`pybigquery`, `sqlalchemy-bigquery`, pin `sqlalchemy<2.0`)
+- [x] Monter la clé GCP dans Superset (`/opt/airflow/credentials/bq-service-account.json`)
+- [x] Ajouter connexion BigQuery dans Superset
+- [x] Tester connexion
 
-#### 2. Dashboard 1 : Marché de l'Emploi 🟡
+#### 2. Jeux de données / vues
+- [x] Vues exécutées côté BigQuery :
+  - `v_offres_daily`
+  - `v_top_competences`
+  - `v_salaires_secteur_ville`
+  - `v_geo_offres`
+- [ ] Publier ces vues comme datasets Superset (colonne date par défaut, filtres globaux)
+- [ ] Ajouter si besoin `fact_*`, `dim_*`, `agg_matching_scores` (après matching/CVs)
+
+#### 3. Dashboard 1 : Marché de l'Emploi 🟡
 **Charts :**
 - [ ] **Offres par jour** (Line Chart)
   - Évolution temporelle
@@ -493,7 +497,7 @@ Créer les dashboards Superset pour visualiser les données du marché de l'empl
 - [ ] **Types de contrats** (Pie Chart)
   - CDI, CDD, Stage, etc.
 
-#### 3. Dashboard 2 : Analyse Compétences 🟡
+#### 4. Dashboard 2 : Analyse Compétences 🟡
 **Charts :**
 - [ ] **Compétences émergentes** (Line Chart)
   - Tendances dans le temps
@@ -504,7 +508,7 @@ Créer les dashboards Superset pour visualiser les données du marché de l'empl
 - [ ] **Gap analysis** (Bar Chart)
   - Compétences demandées vs disponibles
 
-#### 4. Dashboard 3 : Matching Candidats 🟡
+#### 5. Dashboard 3 : Matching Candidats 🟡
 **Charts :**
 - [ ] **Meilleurs matchs** (Table)
   - Top 20 offres-CVs
@@ -516,7 +520,7 @@ Créer les dashboards Superset pour visualiser les données du marché de l'empl
 - [ ] **Gap compétences** (Bar Chart)
   - Compétences manquantes par candidat
 
-#### 5. Dashboard 4 : Tendances Salariales 🟢
+#### 6. Dashboard 4 : Tendances Salariales 🟢
 **Charts :**
 - [ ] **Évolution salaires** (Line Chart)
   - Par compétence, secteur
