@@ -69,3 +69,34 @@ SELECT
 FROM `jobmatching_dw.Fact_OffresEmploi` fe
 LEFT JOIN `jobmatching_dw.Dim_Localisation` lo ON fe.localisation_id = lo.localisation_id
 WHERE lo.latitude IS NOT NULL AND lo.longitude IS NOT NULL;
+
+-- Salaires par secteur (avec médianes et percentiles)
+CREATE OR REPLACE VIEW `jobmatching_dw.v_salaires_secteur` AS
+SELECT
+  COALESCE(fe.secteur_id, 'unknown') AS secteur_id,
+  COALESCE(se.nom_secteur, 'unknown') AS nom_secteur,
+  COUNT(*) AS offres_totales,
+  AVG(salaire_min) AS salaire_min_moy,
+  AVG(salaire_max) AS salaire_max_moy,
+  APPROX_QUANTILES(salaire_min, 100)[OFFSET(50)] AS salaire_min_p50,
+  APPROX_QUANTILES(salaire_max, 100)[OFFSET(50)] AS salaire_max_p50,
+  APPROX_QUANTILES(salaire_min, 100)[OFFSET(10)] AS salaire_min_p10,
+  APPROX_QUANTILES(salaire_max, 100)[OFFSET(90)] AS salaire_max_p90
+FROM `jobmatching_dw.Fact_OffresEmploi` fe
+LEFT JOIN `jobmatching_dw.Dim_Secteur` se ON fe.secteur_id = se.secteur_id
+GROUP BY 1, 2;
+
+-- Télétravail par secteur (part des offres + distribution du taux)
+CREATE OR REPLACE VIEW `jobmatching_dw.v_teletravail_secteur` AS
+SELECT
+  COALESCE(fe.secteur_id, 'unknown') AS secteur_id,
+  COALESCE(se.nom_secteur, 'unknown') AS nom_secteur,
+  COUNT(*) AS offres_totales,
+  SUM(CASE WHEN teletravail IS TRUE THEN 1 ELSE 0 END) AS offres_teletravail,
+  SAFE_DIVIDE(SUM(CASE WHEN teletravail IS TRUE THEN 1 ELSE 0 END), COUNT(*)) AS part_teletravail,
+  AVG(taux_teletravail) AS taux_teletravail_moy,
+  APPROX_QUANTILES(taux_teletravail, 100)[OFFSET(50)] AS taux_teletravail_p50,
+  APPROX_QUANTILES(taux_teletravail, 100)[OFFSET(90)] AS taux_teletravail_p90
+FROM `jobmatching_dw.Fact_OffresEmploi` fe
+LEFT JOIN `jobmatching_dw.Dim_Secteur` se ON fe.secteur_id = se.secteur_id
+GROUP BY 1, 2;
