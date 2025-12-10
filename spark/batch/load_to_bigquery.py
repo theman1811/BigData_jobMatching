@@ -28,8 +28,10 @@ from pyspark.sql.window import Window
 
 def create_spark_session():
     """Crée la session Spark avec configuration BigQuery"""
+    spark_master = os.getenv("SPARK_MASTER", "spark://spark-master:7077")
     return SparkSession.builder \
         .appName("BigQueryLoader") \
+        .master(spark_master) \
         .config("spark.sql.adaptive.enabled", "true") \
         .config("spark.sql.adaptive.coalescePartitions.enabled", "true") \
         .config("spark.jars.packages",

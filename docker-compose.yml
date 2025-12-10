@@ -169,7 +169,7 @@ services:
   # SPARK MASTER - Cluster Manager
   # ==========================================
   spark-master:
-    image: apache/spark-py:latest
+    image: apache/spark-py:3.5.1
     container_name: bigdata_spark_master
     hostname: spark-master
     ports:
@@ -205,7 +205,7 @@ services:
   # SPARK WORKER 1 - Worker Node
   # ==========================================
   spark-worker-1:
-    image: apache/spark-py:latest
+    image: apache/spark-py:3.5.1
     container_name: bigdata_spark_worker_1
     hostname: spark-worker-1
     depends_on:
@@ -244,7 +244,7 @@ services:
   # SPARK WORKER 2 - Worker Node
   # ==========================================
   spark-worker-2:
-    image: apache/spark-py:latest
+    image: apache/spark-py:3.5.1
     container_name: bigdata_spark_worker_2
     hostname: spark-worker-2
     depends_on:
@@ -329,7 +329,10 @@ services:
   # AIRFLOW WEBSERVER - Interface Web
   # ==========================================
   airflow-webserver:
-    image: apache/airflow:2.8.0-python3.11
+    image: bigdata_airflow_custom:2.8.0-python3.11
+    build:
+      context: ./docker/airflow
+      dockerfile: Dockerfile
     container_name: bigdata_airflow_webserver
     hostname: airflow-webserver
     depends_on:
@@ -349,7 +352,6 @@ services:
       AIRFLOW__CORE__LOAD_EXAMPLES: 'false'
       AIRFLOW__API__AUTH_BACKENDS: 'airflow.api.auth.backend.basic_auth'
       AIRFLOW__WEBSERVER__EXPOSE_CONFIG: 'true'
-      _PIP_ADDITIONAL_REQUIREMENTS: "apache-airflow-providers-apache-spark==4.5.0 apache-airflow-providers-google==10.12.0 kafka-python confluent-kafka"
       # MinIO/S3 Configuration
       AWS_ACCESS_KEY_ID: minioadmin
       AWS_SECRET_ACCESS_KEY: minioadmin123
@@ -360,9 +362,9 @@ services:
       BIGQUERY_DATASET: ${BIGQUERY_DATASET:-jobmatching_dw}
       GOOGLE_APPLICATION_CREDENTIALS: /opt/airflow/credentials/bq-service-account.json
       # Airflow connections
-      AIRFLOW_CONN_SPARK_DEFAULT: "spark://spark-master:7077?extra__spark__master=spark%3A%2F%2Fspark-master%3A7077"
-      # Java pour spark-submit
-      JAVA_HOME: /usr/lib/jvm/java-17-openjdk-arm64
+      AIRFLOW_CONN_SPARK_DEFAULT: "spark://spark-master:7077?extra__master=spark%3A%2F%2Fspark-master%3A7077"
+      HOST_PROJECT_ROOT: /Users/nedio/Documents/programmation/school/BigData_jobMatching
+      DOCKER_HOST: unix:///var/run/docker.sock
     volumes:
       - ./airflow/dags:/opt/airflow/dags
       - ./airflow/plugins:/opt/airflow/plugins
@@ -371,6 +373,7 @@ services:
       - ./spark:/opt/airflow/spark
       - ./kafka:/opt/airflow/kafka
       - ./credentials/gcp-service-account.json:/opt/airflow/credentials/bq-service-account.json:ro
+      - /var/run/docker.sock:/var/run/docker.sock
     networks:
       - bigdata_network
     restart: unless-stopped
@@ -385,7 +388,10 @@ services:
   # AIRFLOW SCHEDULER - Ordonnanceur
   # ==========================================
   airflow-scheduler:
-    image: apache/airflow:2.8.0-python3.11
+    image: bigdata_airflow_custom:2.8.0-python3.11
+    build:
+      context: ./docker/airflow
+      dockerfile: Dockerfile
     container_name: bigdata_airflow_scheduler
     hostname: airflow-scheduler
     depends_on:
@@ -402,7 +408,6 @@ services:
       AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION: 'true'
       AIRFLOW__CORE__LOAD_EXAMPLES: 'false'
       AIRFLOW__API__AUTH_BACKENDS: 'airflow.api.auth.backend.basic_auth'
-      _PIP_ADDITIONAL_REQUIREMENTS: "apache-airflow-providers-apache-spark==4.5.0 apache-airflow-providers-google==10.12.0 kafka-python confluent-kafka"
       # MinIO/S3 Configuration
       AWS_ACCESS_KEY_ID: minioadmin
       AWS_SECRET_ACCESS_KEY: minioadmin123
@@ -413,9 +418,9 @@ services:
       BIGQUERY_DATASET: ${BIGQUERY_DATASET:-jobmatching_dw}
       GOOGLE_APPLICATION_CREDENTIALS: /opt/airflow/credentials/bq-service-account.json
       # Airflow connections
-      AIRFLOW_CONN_SPARK_DEFAULT: "spark://spark-master:7077?extra__spark__master=spark%3A%2F%2Fspark-master%3A7077"
-      # Java pour spark-submit
-      JAVA_HOME: /usr/lib/jvm/java-17-openjdk-arm64
+      AIRFLOW_CONN_SPARK_DEFAULT: "spark://spark-master:7077?extra__master=spark%3A%2F%2Fspark-master%3A7077"
+      HOST_PROJECT_ROOT: /Users/nedio/Documents/programmation/school/BigData_jobMatching
+      DOCKER_HOST: unix:///var/run/docker.sock
     volumes:
       - ./airflow/dags:/opt/airflow/dags
       - ./airflow/plugins:/opt/airflow/plugins
@@ -424,6 +429,7 @@ services:
       - ./spark:/opt/airflow/spark
       - ./kafka:/opt/airflow/kafka
       - ./credentials/gcp-service-account.json:/opt/airflow/credentials/bq-service-account.json:ro
+      - /var/run/docker.sock:/var/run/docker.sock
     networks:
       - bigdata_network
     restart: unless-stopped
@@ -438,7 +444,10 @@ services:
   # AIRFLOW INIT - Initialisation
   # ==========================================
   airflow-init:
-    image: apache/airflow:2.8.0-python3.11
+    image: bigdata_airflow_custom:2.8.0-python3.11
+    build:
+      context: ./docker/airflow
+      dockerfile: Dockerfile
     container_name: bigdata_airflow_init
     depends_on:
       postgres:
@@ -453,15 +462,12 @@ services:
       _AIRFLOW_WWW_USER_CREATE: 'true'
       _AIRFLOW_WWW_USER_USERNAME: airflow
       _AIRFLOW_WWW_USER_PASSWORD: airflow
-      _PIP_ADDITIONAL_REQUIREMENTS: "apache-airflow-providers-apache-spark==4.5.0 apache-airflow-providers-google==10.12.0 kafka-python confluent-kafka"
       # BigQuery / GCP
       GCP_PROJECT_ID: ${GCP_PROJECT_ID:-noble-anvil-479619-h9}
       BIGQUERY_DATASET: ${BIGQUERY_DATASET:-jobmatching_dw}
       GOOGLE_APPLICATION_CREDENTIALS: /opt/airflow/credentials/bq-service-account.json
       # Airflow connections
-      AIRFLOW_CONN_SPARK_DEFAULT: "spark://spark-master:7077?extra__spark__master=spark%3A%2F%2Fspark-master%3A7077"
-      # Java pour spark-submit
-      JAVA_HOME: /usr/lib/jvm/java-17-openjdk-arm64
+      AIRFLOW_CONN_SPARK_DEFAULT: "spark://spark-master:7077?extra__master=spark%3A%2F%2Fspark-master%3A7077"
     volumes:
       - ./airflow/dags:/opt/airflow/dags
       - ./airflow/plugins:/opt/airflow/plugins

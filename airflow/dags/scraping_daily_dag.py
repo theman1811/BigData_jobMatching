@@ -1,9 +1,10 @@
 from datetime import datetime, timedelta
 from airflow import DAG
-from airflow.operators.bash import BashOperator
 from airflow.operators.python import PythonOperator
+from airflow.providers.docker.operators.docker import DockerOperator
 from airflow.sensors.external_task import ExternalTaskSensor
 from airflow.utils.state import DagRunState
+from docker.types import Mount
 from pathlib import Path
 import json
 import os
@@ -31,9 +32,34 @@ dag = DAG(
 # Variables d'environnement
 # Le volume du projet est monté sous /opt/airflow (voir docker-compose)
 PROJECT_ROOT = "/opt/airflow"
-SCRAPERS_SCRIPT = f"{PROJECT_ROOT}/kafka/producers/run_scraper.py"
+SCRAPERS_IMAGE = "bigdata_jobmatching-scrapers"
 SCRAPED_OUTPUT_DIR = os.getenv("SCRAPED_OUTPUT_DIR", f"{PROJECT_ROOT}/data/scraped")
+HOST_PROJECT_ROOT = os.getenv("HOST_PROJECT_ROOT", "/opt/airflow")
 STRICT_VALIDATION = os.getenv("SCRAPED_VALIDATION_STRICT", "false").lower() == "true"
+
+# Variables partagées pour les conteneurs de scraping déclenchés via DockerOperator
+SCRAPER_ENV = {
+    "KAFKA_BOOTSTRAP_SERVERS": "kafka:29092",
+    "KAFKA_SCHEMA_REGISTRY_URL": "http://schema-registry:8081",
+    "MINIO_ENDPOINT": "http://minio:9000",
+    "MINIO_ACCESS_KEY": "minioadmin",
+    "MINIO_SECRET_KEY": "minioadmin123",
+    "MINIO_BUCKET_JOBS": "scraped-jobs",
+    "MINIO_BUCKET_CVS": "scraped-cvs",
+    "SCRAPING_DELAY_MIN": "2",
+    "SCRAPING_DELAY_MAX": "5",
+    "USER_AGENT_ROTATE": "true",
+    "USE_PROXY": "false",
+    "KAFKA_TOPIC_JOBS_RAW": "job-offers-raw",
+    "KAFKA_TOPIC_CVS_RAW": "cvs-raw",
+    "KAFKA_TOPIC_SCRAPING_ERRORS": "scraping-errors",
+}
+
+# Montage des sources de scrapers et des données dans le conteneur lancé
+SCRAPER_MOUNTS = [
+    Mount(source=f"{HOST_PROJECT_ROOT}/kafka/producers", target="/app/producers", type="bind"),
+    Mount(source=f"{HOST_PROJECT_ROOT}/data/scraped", target="/app/data/scraped", type="bind"),
+]
 
 def check_data_quality(**context):
     """Vérifie la présence minimale de données scrapées par source.
@@ -78,35 +104,67 @@ def notify_completion(**context):
 # ============================================
 
 # 1. Scraper Educarriere
-scrape_educarriere = BashOperator(
+scrape_educarriere = DockerOperator(
     task_id='scrape_educarriere',
-    bash_command=f'cd {PROJECT_ROOT}/kafka/producers && python run_scraper.py --scraper educarriere',
+    image=SCRAPERS_IMAGE,
+    command="python /app/producers/run_scraper.py --scraper educarriere --max-pages 10",
+    api_version="auto",
+    docker_url="unix://var/run/docker.sock",
+    network_mode="bigdata_network",
+    environment=SCRAPER_ENV,
+    mounts=SCRAPER_MOUNTS,
+    auto_remove=True,
+    mount_tmp_dir=False,
     dag=dag,
-    execution_timeout=timedelta(hours=1)
+    execution_timeout=timedelta(hours=1),
 )
 
 # 2. Scraper Macarrierepro
-scrape_macarrierepro = BashOperator(
+scrape_macarrierepro = DockerOperator(
     task_id='scrape_macarrierepro',
-    bash_command=f'cd {PROJECT_ROOT}/kafka/producers && python run_scraper.py --scraper macarrierepro',
+    image=SCRAPERS_IMAGE,
+    command="python /app/producers/run_scraper.py --scraper macarrierepro --max-pages 20",
+    api_version="auto",
+    docker_url="unix://var/run/docker.sock",
+    network_mode="bigdata_network",
+    environment=SCRAPER_ENV,
+    mounts=SCRAPER_MOUNTS,
+    auto_remove=True,
+    mount_tmp_dir=False,
     dag=dag,
-    execution_timeout=timedelta(hours=1)
+    execution_timeout=timedelta(hours=1),
 )
 
 # 3. Scraper Emploi.ci
-scrape_emploi_ci = BashOperator(
+scrape_emploi_ci = DockerOperator(
     task_id='scrape_emploi_ci',
-    bash_command=f'cd {PROJECT_ROOT}/kafka/producers && python run_scraper.py --scraper emploi_ci',
+    image=SCRAPERS_IMAGE,
+    command="python /app/producers/run_scraper.py --scraper emploi_ci --max-pages 20",
+    api_version="auto",
+    docker_url="unix://var/run/docker.sock",
+    network_mode="bigdata_network",
+    environment=SCRAPER_ENV,
+    mounts=SCRAPER_MOUNTS,
+    auto_remove=True,
+    mount_tmp_dir=False,
     dag=dag,
-    execution_timeout=timedelta(hours=1)
+    execution_timeout=timedelta(hours=1),
 )
 
 # 4. Scraper LinkedIn (optionnel - peut échouer)
-scrape_linkedin = BashOperator(
+scrape_linkedin = DockerOperator(
     task_id='scrape_linkedin',
-    bash_command=f'cd {PROJECT_ROOT}/kafka/producers && python run_scraper.py --scraper linkedin || echo "LinkedIn scraping failed, continuing..."',
+    image=SCRAPERS_IMAGE,
+    command="python /app/producers/run_scraper.py --scraper linkedin --max-pages 20",
+    api_version="auto",
+    docker_url="unix://var/run/docker.sock",
+    network_mode="bigdata_network",
+    environment=SCRAPER_ENV,
+    mounts=SCRAPER_MOUNTS,
+    auto_remove=True,
+    mount_tmp_dir=False,
     dag=dag,
-    execution_timeout=timedelta(hours=2)
+    execution_timeout=timedelta(hours=2),
 )
 
 # ============================================

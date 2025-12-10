@@ -31,8 +31,12 @@ import re
 
 def create_spark_session():
     """Crée la session Spark avec configuration MinIO"""
+    # Récupérer le master depuis l'environnement ou utiliser la valeur par défaut
+    spark_master = os.getenv("SPARK_MASTER", "spark://spark-master:7077")
+    
     return SparkSession.builder \
         .appName("JobOffersParser") \
+        .master(spark_master) \
         .config("spark.sql.adaptive.enabled", "true") \
         .config("spark.sql.adaptive.coalescePartitions.enabled", "true") \
         .getOrCreate()

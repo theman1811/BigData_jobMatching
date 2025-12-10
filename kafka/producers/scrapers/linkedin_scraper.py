@@ -234,16 +234,16 @@ class LinkedInScraper(BaseJobScraperCI):
     def parse_linkedin_job_card(self, job_card) -> Optional[Dict[str, Any]]:
         """Parser une carte d'offre LinkedIn"""
         try:
-            # Extraire le titre
-            title_elem = job_card.find_element(By.CLASS_NAME, "job-card-list__title")
+            # Extraire le titre (nouvelle structure LinkedIn)
+            title_elem = job_card.find_element(By.CSS_SELECTOR, "a.job-card-container__link")
             title = title_elem.text.strip()
 
             # Extraire l'entreprise
-            company_elem = job_card.find_element(By.CLASS_NAME, "job-card-container__company-name")
+            company_elem = job_card.find_element(By.CSS_SELECTOR, ".artdeco-entity-lockup__subtitle span")
             company = company_elem.text.strip()
 
-            # Extraire la localisation
-            location_elem = job_card.find_element(By.CLASS_NAME, "job-card-container__metadata-item")
+            # Extraire la localisation (premier élément de la métadonnée)
+            location_elem = job_card.find_element(By.CSS_SELECTOR, ".job-card-container__metadata-wrapper li")
             location_raw = location_elem.text.strip()
             location = self.clean_location_ci(location_raw)
 
@@ -260,7 +260,7 @@ class LinkedInScraper(BaseJobScraperCI):
                     job_type = text
 
             # Extraire le lien de l'offre
-            link_elem = job_card.find_element(By.CLASS_NAME, "job-card-list__title")
+            link_elem = job_card.find_element(By.CSS_SELECTOR, "a.job-card-container__link")
             job_url = link_elem.get_attribute("href") or ""
 
             # Créer l'ID unique

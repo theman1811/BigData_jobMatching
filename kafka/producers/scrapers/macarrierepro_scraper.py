@@ -22,6 +22,7 @@ class MacarriereproScraper(BaseJobScraperCI):
 
     BASE_URL = "https://macarrierepro.net"
     OFFERS_URL = "https://macarrierepro.net/poste/"
+    API_URL = "https://macarrierepro.net/jm-ajax/get_listings/"
 
     # Mapping des catégories vers des compétences
     CATEGORY_SKILLS_MAPPING = {
@@ -262,6 +263,8 @@ class MacarriereproScraper(BaseJobScraperCI):
 
         # Chercher les offres (différentes structures possibles)
         job_selectors = [
+            '.job-grid',            # format API get_listings
+            '.job-list',            # format API get_listings
             '.job-item',
             '.job-card',
             '.offre-item',
@@ -339,24 +342,42 @@ class MacarriereproScraper(BaseJobScraperCI):
         self.logger.warning("⚠️ Pagination non trouvée, utilisation de 15 pages par défaut")
         return 15
 
+    def fetch_api_page(self, page: int = 1) -> Dict[str, Any]:
+        """Appelle l'API AJAX WP Job Manager et retourne json."""
+        payload = {
+            "page": page,
+            "per_page": 20,  # valeur courante observée
+        }
+        headers = {
+            "Content-Type": "application/x-www-form-urlencoded",
+            "User-Agent": self.session.headers.get("User-Agent", "Mozilla/5.0"),
+            "Referer": self.OFFERS_URL,
+        }
+        try:
+            resp = self.session.post(self.API_URL, data=payload, headers=headers, timeout=30)
+            resp.raise_for_status()
+            return resp.json()
+        except Exception as e:
+            self.logger.error(f"❌ Erreur appel API page {page}: {e}")
+            return {}
+
     def scrape_jobs(self, max_pages: int = None, delay_min: float = 2.0, delay_max: float = 5.0) -> List[Dict[str, Any]]:
-        """Scrape toutes les offres d'emploi de Macarrierepro"""
+        """Scrape toutes les offres d'emploi via l'API AJAX (get_listings)."""
         all_jobs = []
 
-        # Page 1 pour déterminer le nombre total de pages
-        self.logger.info("📊 Récupération du nombre total de pages...")
-        html_page1 = self.scrape_page(1)
-
-        if not html_page1:
-            self.logger.error("❌ Impossible de charger la première page")
+        # Page 1 pour déterminer le nombre total de pages via l'API
+        self.logger.info("📊 Récupération du nombre total de pages via l'API...")
+        data = self.fetch_api_page(1)
+        if not data or not data.get("found_jobs"):
+            self.logger.error("❌ Impossible de charger la première page (API)")
             return []
 
-        total_pages = self.get_total_pages(html_page1)
+        total_pages = int(data.get("max_num_pages", 1) or 1)
         actual_max_pages = min(max_pages or total_pages, total_pages)
-
         self.logger.info(f"📈 Total pages: {total_pages}, scraping: {actual_max_pages} pages")
 
         # Parser la première page
+        html_page1 = data.get("html", "")
         jobs_page1 = self.parse_jobs_from_html(html_page1)
         all_jobs.extend(jobs_page1)
         self.logger.info(f"📄 Page 1: {len(jobs_page1)} offres trouvées")
@@ -364,23 +385,19 @@ class MacarriereproScraper(BaseJobScraperCI):
         # Scraper les pages suivantes
         for page in range(2, actual_max_pages + 1):
             self.logger.info(f"🔄 Page {page}/{actual_max_pages}")
-
-            # Délai anti-ban
             self.wait_random(delay_min, delay_max)
 
-            html = self.scrape_page(page)
-            if not html:
-                self.logger.warning(f"⚠️ Page {page} ignorée")
+            data_page = self.fetch_api_page(page)
+            if not data_page or not data_page.get("found_jobs"):
+                self.logger.warning(f"⚠️ Page {page} ignorée (API sans jobs)")
                 continue
 
+            html = data_page.get("html", "")
             jobs = self.parse_jobs_from_html(html)
             all_jobs.extend(jobs)
-
             self.logger.info(f"📄 Page {page}: {len(jobs)} offres trouvées (Total: {len(all_jobs)})")
 
-        # Statistiques finales
         self.logger.info(f"✅ Scraping Macarrierepro terminé: {len(all_jobs)} offres au total")
-
         return all_jobs
 
 

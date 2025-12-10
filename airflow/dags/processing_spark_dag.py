@@ -28,7 +28,8 @@ dag = DAG(
 )
 
 # Variables d'environnement
-PROJECT_ROOT = "/opt/airflow/project"  # À adapter selon le montage Docker
+# Le projet est monté sous /opt/airflow (voir docker-compose)
+PROJECT_ROOT = "/opt/airflow"
 SPARK_APP_PATH = f"{PROJECT_ROOT}/spark/batch"
 SCRIPTS_PATH = f"{PROJECT_ROOT}/scripts/spark"
 PROCESSED_DATA_DIR = Path(os.getenv("PROCESSED_DATA_DIR", f"{PROJECT_ROOT}/data/processed"))
@@ -36,13 +37,14 @@ STRICT_VALIDATION = os.getenv("PROCESSING_VALIDATION_STRICT", "false").lower() =
 
 # Configuration commune Spark
 SPARK_CONF = {
+    'spark.master': 'spark://spark-master:7077',
     'spark.sql.adaptive.enabled': 'true',
     'spark.sql.adaptive.coalescePartitions.enabled': 'true',
     'spark.hadoop.fs.s3a.endpoint': 'http://minio:9000',
     'spark.hadoop.fs.s3a.access.key': 'minioadmin',
     'spark.hadoop.fs.s3a.secret.key': 'minioadmin123',
     'spark.hadoop.fs.s3a.path.style.access': 'true',
-    'spark.jars.packages': 'com.google.cloud.spark:spark-bigquery-with-dependencies_2.12:0.32.2'
+    'spark.jars.packages': 'com.google.cloud.spark:spark-bigquery-with-dependencies_2.12:0.32.2,org.apache.hadoop:hadoop-aws:3.3.4,com.amazonaws:aws-java-sdk-bundle:1.12.262'
 }
 
 SPARK_ENV_VARS = {
@@ -91,54 +93,50 @@ def check_processing_quality(**context):
 # JOBS SPARK BATCH (séquentiels)
 # ============================================
 
+# Paramètres communs pour SparkSubmitOperator
+spark_common_kwargs = {
+    "conn_id": "spark_default",
+    "conf": SPARK_CONF,
+    "env_vars": {
+        **SPARK_ENV_VARS,
+        'SPARK_MASTER': 'spark://spark-master:7077',  # Force le master via env var
+    },
+    "dag": dag,
+}
+
 # 1. Parsing des offres HTML
 spark_parse_jobs = SparkSubmitOperator(
     task_id='spark_parse_jobs',
     application=f"{SPARK_APP_PATH}/parse_jobs.py",
-    conn_id='spark_default',
-    conf=SPARK_CONF,
-    env_vars=SPARK_ENV_VARS,
-    dag=dag
+    **spark_common_kwargs
 )
 
 # 2. Extraction des compétences (NLP)
 spark_extract_skills = SparkSubmitOperator(
     task_id='spark_extract_skills',
     application=f"{SPARK_APP_PATH}/extract_skills.py",
-    conn_id='spark_default',
-    conf=SPARK_CONF,
-    env_vars=SPARK_ENV_VARS,
-    dag=dag
+    **spark_common_kwargs
 )
 
 # 3. Extraction des salaires
 spark_extract_salary = SparkSubmitOperator(
     task_id='spark_extract_salary',
     application=f"{SPARK_APP_PATH}/extract_salary.py",
-    conn_id='spark_default',
-    conf=SPARK_CONF,
-    env_vars=SPARK_ENV_VARS,
-    dag=dag
+    **spark_common_kwargs
 )
 
 # 4. Déduplication
 spark_deduplicate = SparkSubmitOperator(
     task_id='spark_deduplicate',
     application=f"{SPARK_APP_PATH}/deduplicate.py",
-    conn_id='spark_default',
-    conf=SPARK_CONF,
-    env_vars=SPARK_ENV_VARS,
-    dag=dag
+    **spark_common_kwargs
 )
 
 # 5. Extraction des secteurs (optionnel)
 spark_extract_sectors = SparkSubmitOperator(
     task_id='spark_extract_sectors',
     application=f"{SPARK_APP_PATH}/extract_sectors.py",
-    conn_id='spark_default',
-    conf=SPARK_CONF,
-    env_vars=SPARK_ENV_VARS,
-    dag=dag
+    **spark_common_kwargs
 )
 
 # ============================================
