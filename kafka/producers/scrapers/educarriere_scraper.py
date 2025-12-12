@@ -127,6 +127,8 @@ class EducarriereScraper(BaseJobScraperCI):
                 'title': title,
                 'company': 'Entreprise confidentielle',  # Educarriere n'affiche pas toujours l'entreprise
                 'location': 'Côte d\'Ivoire',
+                # Conserver le HTML brut pour sauvegarde MinIO / re-parsing
+                'html_content': str(job_element),
                 'description': title,
                 'contract_type': contract_type,
                 'job_type': contract_type,

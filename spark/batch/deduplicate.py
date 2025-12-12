@@ -23,7 +23,7 @@ from pyspark.sql.functions import (
     col, udf, lower, trim, regexp_replace, concat_ws,
     levenshtein, size, explode, collect_list, struct,
     row_number, when, coalesce, current_timestamp,
-    date_format, arrays_zip, array_distinct
+    date_format, arrays_zip, array_distinct, lit
 )
 from pyspark.sql.types import (
     StructType, StructField, StringType, IntegerType, FloatType,
@@ -112,17 +112,38 @@ def calculate_similarity_score_udf(title1, company1, location1, title2, company2
 
 
 def create_similarity_key_udf(title, company, location):
-    """UDF pour créer une clé de similarité"""
+    """UDF pour créer une clé de similarité plus discriminante"""
     normalized_title = normalize_text_udf(title)
     normalized_company = normalize_text_udf(company)
     normalized_location = normalize_text_udf(location)
 
-    # Prendre les premiers mots significatifs
-    title_words = normalized_title.split()[:3] if normalized_title else []
-    company_words = normalized_company.split()[:2] if normalized_company else []
-    location_words = normalized_location.split()[:1] if normalized_location else []
+    # Prendre plus de mots pour être plus discriminante
+    # Utiliser les 5-6 premiers mots du titre au lieu de 3
+    title_words = normalized_title.split()[:6] if normalized_title else []
+    company_words = normalized_company.split()[:3] if normalized_company else []
+    location_words = normalized_location.split()[:2] if normalized_location else []
 
+    # Filtrer les valeurs par défaut/génériques qui créent des collisions
+    generic_company = ['entreprise', 'confidentielle', 'company', 'societe']
+    generic_location = ['cote', 'ivoire', 'abidjan', 'location']
+    
+    # Si l'entreprise est générique, utiliser plus de mots du titre
+    if company_words and all(word in generic_company for word in company_words):
+        # Utiliser encore plus de mots du titre pour compenser
+        title_words = normalized_title.split()[:8] if normalized_title else []
+    
+    # Si la localisation est générique, ignorer ou utiliser plus de mots
+    if location_words and all(word in generic_location for word in location_words):
+        location_words = []  # Ignorer la localisation si trop générique
+    
     key_parts = title_words + company_words + location_words
+    
+    # Si la clé est trop courte ou vide, utiliser un hash du titre complet
+    if len(key_parts) < 3:
+        # Utiliser un hash des 10 premiers mots du titre normalisé
+        fallback_words = normalized_title.split()[:10] if normalized_title else []
+        key_parts = fallback_words if fallback_words else ['UNKNOWN']
+    
     return '_'.join(key_parts) if key_parts else 'UNKNOWN'
 
 
@@ -205,6 +226,20 @@ def process_deduplication(spark, input_path, output_path):
         .withColumn("normalized_location", normalize_text(col("location")))
 
     print("✅ Données préparées avec clés de similarité")
+    
+    # Diagnostic : compter les clés de similarité uniques
+    unique_keys_count = prepared_df.select("similarity_key").distinct().count()
+    print(f"📊 Diagnostic: {unique_keys_count} clés de similarité uniques sur {total_jobs} offres")
+    
+    # Afficher les clés les plus fréquentes
+    key_distribution = prepared_df \
+        .groupBy("similarity_key") \
+        .count() \
+        .orderBy(col("count").desc()) \
+        .limit(5)
+    
+    print("📊 Top 5 clés de similarité les plus fréquentes:")
+    key_distribution.show(truncate=False)
 
     # Étape 2: Grouper par clé de similarité et collecter les offres candidates
     grouped_df = prepared_df \
@@ -253,7 +288,7 @@ def process_deduplication(spark, input_path, output_path):
                     offer2.title, offer2.company, offer2.location
                 )
 
-                if similarity >= 0.7:  # Seuil de similarité élevé
+                if similarity >= 0.85:  # Seuil de similarité élevé (augmenté de 0.7 à 0.85)
                     duplicates.append({
                         'offer1_id': offer1.job_id,
                         'offer2_id': offer2.job_id,
@@ -281,36 +316,46 @@ def process_deduplication(spark, input_path, output_path):
             col("duplicate_pair.similarity_score"),
             col("duplicate_pair.group_size")
         ) \
-        .filter(col("similarity_score") >= 0.7)
+        .filter(col("similarity_score") >= 0.85)  # Seuil augmenté pour être plus strict
 
     print(f"✅ {duplicates_df.count()} paires de doublons détectées")
 
-    # Étape 4: Collecter tous les IDs à supprimer (garder seulement le meilleur de chaque paire)
-    duplicate_ids_df = duplicates_df \
-        .select(
-            col("job_id_1").alias("duplicate_id"),
-            col("job_id_2").alias("keep_id"),
-            col("similarity_score")
+    # Étape 4: Pour chaque groupe de doublons (basé sur similarity_key), 
+    # garder l'offre avec le meilleur completeness_score
+    # Créer une fenêtre pour identifier la meilleure offre de chaque groupe
+    window_spec = Window.partitionBy("similarity_key").orderBy(
+        col("completeness_score").desc(), 
+        col("parsing_quality_score").desc()
+    )
+    
+    # Identifier les offres dans des groupes avec doublons
+    prepared_with_rank = prepared_df \
+        .join(
+            grouped_df.select("similarity_key").withColumn("has_duplicates", lit(True)),
+            "similarity_key",
+            "left"
         ) \
-        .union(
-            duplicates_df.select(
-                col("job_id_2").alias("duplicate_id"),
-                col("job_id_1").alias("keep_id"),
-                col("similarity_score")
-            )
-        ) \
-        .distinct()
+        .withColumn("rank", 
+            when(col("has_duplicates").isNotNull(), 
+                 row_number().over(window_spec)
+            ).otherwise(lit(1))
+        )
 
-    # Pour chaque groupe de doublons, déterminer lequel garder
-    # On garde l'offre avec le meilleur score de complétude
-    best_offers_df = prepared_df \
-        .join(duplicate_ids_df, col("job_id") == col("duplicate_id"), "left") \
-        .filter(col("keep_id").isNull())  # Garder seulement les offres non marquées comme doublons
+    # Garder :
+    # 1. Les offres qui ne sont pas dans des groupes de doublons (has_duplicates is NULL)
+    # 2. L'offre avec rank=1 de chaque groupe de doublons (meilleure offre)
+    best_offers_df = prepared_with_rank \
+        .filter(
+            (col("has_duplicates").isNull()) |  # Offres sans doublons
+            (col("rank") == 1)  # Meilleure offre de chaque groupe
+        ) \
+        .drop("has_duplicates", "rank", "similarity_key", "normalized_title", "normalized_company", "normalized_location")
 
     print(f"✅ {best_offers_df.count()} offres uniques conservées après déduplication")
 
     # Étape 5: Finaliser les données dédupliquées
     deduplicated_df = best_offers_df \
+        .withColumn("source", coalesce(col("source"), lit("unknown"))) \
         .select(
             col("job_id"),
             col("source"),

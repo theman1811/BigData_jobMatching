@@ -85,14 +85,14 @@ Script d'init : `docker/postgres/init-multiple-databases.sh`
 
 ```
 ┌─────────────────────────────────────────────────────────┐
-│                   WEB SCRAPING                           │
-│  (Indeed, LinkedIn, WTTJ, Apec, CV Libraries)           │
+│                   WEB SCRAPING                          │
+│ (Educarriere, LinkedIn, Goafricaonline, Macarrierepro)  │
 └──────────────────────┬──────────────────────────────────┘
                        │
                        ▼
 ┌─────────────────────────────────────────────────────────┐
-│                KAFKA (KRaft Mode)                        │
-│  Topics: job-offers-raw, cvs-raw, scraping-errors      │
+│                KAFKA (KRaft Mode)                       │
+│  Topics: job-offers-raw, cvs-raw, scraping-errors       │
 └──────────────────────┬──────────────────────────────────┘
                        │
          ┌─────────────┴─────────────┐
@@ -137,6 +137,32 @@ Script d'init : `docker/postgres/init-multiple-databases.sh`
          │    • Salary Analysis    │
          │    • Candidate Matching │
          └─────────────────────────┘
+```
+
+### 📊 Diagramme Mermaid
+
+```mermaid
+flowchart TD
+    A[WEB SCRAPING<br/>Educarriere, LinkedIn<br/>Goafricaonline, Macarrierepro] --> B[KAFKA KRaft Mode<br/>Topics: job-offers-raw<br/>cvs-raw, scraping-errors]
+    
+    B --> C[MINIO S3<br/>Data Lake<br/>• Raw HTML<br/>• Raw PDF<br/>• Parquet]
+    B --> D[SPARK CLUSTER<br/>Processing<br/>• Parsing<br/>• NLP<br/>• Matching]
+    
+    D --> C
+    C --> E[AIRFLOW<br/>Orchestration<br/>• Scraping DAGs<br/>• Processing DAGs<br/>• Loading DAGs]
+    D --> E
+    
+    E --> F[BIGQUERY<br/>Data Warehouse<br/>• fact_jobs<br/>• fact_cvs<br/>• dim_skills<br/>• agg_matching]
+    
+    F --> G[SUPERSET<br/>BI Dashboards<br/>• Job Market Analysis<br/>• Skills Trends<br/>• Salary Analysis<br/>• Candidate Matching]
+    
+    style A fill:#e1f5ff
+    style B fill:#fff4e1
+    style C fill:#e8f5e9
+    style D fill:#f3e5f5
+    style E fill:#fff3e0
+    style F fill:#e0f2f1
+    style G fill:#fce4ec
 ```
 
 ## 📦 Services Docker

@@ -23,7 +23,7 @@ from pyspark.sql.functions import (
     col, udf, lower, trim, regexp_replace, concat_ws,
     explode, collect_list, struct, when, coalesce,
     current_timestamp, date_format, size, array_distinct,
-    arrays_zip, array_union
+    arrays_zip, array_union, lit, array, transform
 )
 from pyspark.sql.types import (
     StructType, StructField, StringType, IntegerType, FloatType,
@@ -331,6 +331,7 @@ def process_skills_extraction(spark, input_path, output_path):
 
     # Étape 4: Préparation données finales
     output_df = skills_with_metadata_df \
+        .withColumn("source", coalesce(col("source"), lit("unknown"))) \
         .select(
             col("job_id"),
             col("source"),
@@ -345,7 +346,6 @@ def process_skills_extraction(spark, input_path, output_path):
             col("skills_with_metadata"),
             col("parsed_at"),
             col("parsing_quality_score"),
-            col("completeness_score"),
             current_timestamp().alias("skills_extracted_at")
         )
 

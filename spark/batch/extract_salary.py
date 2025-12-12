@@ -21,7 +21,7 @@ from pyspark.sql import SparkSession
 from pyspark.sql.functions import (
     col, udf, lower, trim, regexp_replace, concat_ws,
     when, coalesce, current_timestamp, date_format,
-    lit, struct
+    lit, struct, count, avg
 )
 from pyspark.sql.types import (
     StructType, StructField, StringType, IntegerType, FloatType,
@@ -184,8 +184,17 @@ def infer_salary_range_udf(title, location, contract_type, extracted_salary):
     UDF pour inférer une fourchette salariale basée sur le contexte
     quand aucun salaire explicite n'est trouvé
     """
-    if extracted_salary and extracted_salary.get("salary_min"):
-        return extracted_salary
+    # extracted_salary est un Row PySpark, pas un dict
+    if extracted_salary and extracted_salary.salary_min is not None:
+        # Convertir Row en dict pour retour
+        return {
+            "salary_min": extracted_salary.salary_min,
+            "salary_max": extracted_salary.salary_max,
+            "currency": extracted_salary.currency,
+            "period": extracted_salary.period,
+            "confidence": extracted_salary.confidence,
+            "source": extracted_salary.source
+        }
 
     # Grille salariale approximative pour la Côte d'Ivoire (FCFA/mois)
     salary_ranges = {
@@ -267,8 +276,9 @@ def normalize_salary_udf(raw_salary):
             "data_source": "none"
         }
 
-    salary_min = raw_salary.get("salary_min")
-    salary_max = raw_salary.get("salary_max")
+    # raw_salary est un Row PySpark, accès par attribut
+    salary_min = raw_salary.salary_min if raw_salary.salary_min is not None else None
+    salary_max = raw_salary.salary_max if raw_salary.salary_max is not None else None
 
     # Calcul de la moyenne si fourchette
     if salary_min and salary_max:
@@ -286,10 +296,10 @@ def normalize_salary_udf(raw_salary):
         "salary_min_fcfa": salary_min,
         "salary_max_fcfa": salary_max,
         "salary_avg_fcfa": salary_avg,
-        "currency_original": raw_salary.get("currency", "FCFA"),
-        "period_normalized": raw_salary.get("period", "monthly"),
-        "confidence_score": raw_salary.get("confidence", 0.0),
-        "data_source": raw_salary.get("source", "none")
+        "currency_original": raw_salary.currency if raw_salary.currency else "FCFA",
+        "period_normalized": raw_salary.period if raw_salary.period else "monthly",
+        "confidence_score": raw_salary.confidence if raw_salary.confidence is not None else 0.0,
+        "data_source": raw_salary.source if raw_salary.source else "none"
     }
 
 
@@ -371,6 +381,7 @@ def process_salary_extraction(spark, input_path, output_path):
 
     # Étape 4: Préparation données finales
     output_df = normalized_df \
+        .withColumn("source", coalesce(col("source"), lit("unknown"))) \
         .select(
             col("job_id"),
             col("source"),
@@ -384,7 +395,6 @@ def process_salary_extraction(spark, input_path, output_path):
             col("skills"),
             col("parsed_at"),
             col("parsing_quality_score"),
-            col("completeness_score"),
             col("normalized_salary.salary_min_fcfa").alias("salary_min_fcfa"),
             col("normalized_salary.salary_max_fcfa").alias("salary_max_fcfa"),
             col("normalized_salary.salary_avg_fcfa").alias("salary_avg_fcfa"),

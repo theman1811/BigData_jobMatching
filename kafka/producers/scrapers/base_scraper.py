@@ -311,6 +311,7 @@ class BaseJobScraperCI(ABC):
         """Sauvegarde le HTML brut dans MinIO"""
         try:
             from io import BytesIO
+            import gzip
 
             # Créer le contenu avec métadonnées
             metadata = {
@@ -322,14 +323,17 @@ class BaseJobScraperCI(ABC):
 
             content_with_meta = json.dumps(metadata, ensure_ascii=False, indent=2) + "\n\n" + html_content
 
-            data = BytesIO(content_with_meta.encode('utf-8'))
+            # Compression gzip pour limiter l'espace disque et le trafic
+            compressed = gzip.compress(content_with_meta.encode('utf-8'))
+            data = BytesIO(compressed)
 
             self.minio_client.put_object(
                 self.minio_bucket,
                 f"{job_id}.html",
                 data,
-                length=len(content_with_meta),
-                content_type='text/html; charset=utf-8'
+                length=len(compressed),
+                content_type='text/html; charset=utf-8',
+                metadata={"content-encoding": "gzip"}  # l'API ne supporte pas content_encoding direct
             )
 
             self.stats['jobs_saved_minio'] += 1

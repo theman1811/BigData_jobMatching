@@ -378,8 +378,34 @@ def process_job_parsing(spark, input_path, output_path):
 
     print("✅ UDFs enregistrées")
 
-    # Lire les données HTML depuis MinIO
-    html_df = spark.read.text(input_path)
+    # Lire les données HTML depuis MinIO avec limitation de lot
+    max_files = int(os.getenv("BATCH_LIMIT", "0"))
+    
+    if max_files > 0:
+        # Lister les fichiers et n'en prendre qu'un sous-ensemble
+        from py4j.java_gateway import java_import
+        java_import(spark._jvm, 'org.apache.hadoop.fs.Path')
+        java_import(spark._jvm, 'org.apache.hadoop.fs.FileSystem')
+        
+        hadoop_conf = spark._jsc.hadoopConfiguration()
+        fs = spark._jvm.FileSystem.get(spark._jvm.java.net.URI(input_path.split('*')[0]), hadoop_conf)
+        path = spark._jvm.Path(input_path.replace('*.html', ''))
+        
+        # Lister tous les fichiers HTML
+        file_status = fs.listStatus(path)
+        html_files = [f.getPath().toString() for f in file_status if f.getPath().toString().endswith('.html')][:max_files]
+        
+        print(f"📁 {len(html_files)} fichiers HTML sélectionnés sur {len([f for f in file_status if f.getPath().toString().endswith('.html')])} disponibles")
+        
+        # Lire uniquement les fichiers sélectionnés
+        if html_files:
+            html_df = spark.read.text(html_files).repartition(30)
+        else:
+            raise ValueError("Aucun fichier HTML trouvé")
+    else:
+        # Pas de limite : lire tous les fichiers
+        html_df = spark.read.text(input_path).repartition(30)
+    
     print(f"✅ Données HTML lues depuis {input_path}")
 
     # Parser le format de stockage (métadonnées + HTML)
@@ -478,10 +504,11 @@ def main():
     print("🚀 Démarrage du parsing Spark Batch - Offres d'emploi")
 
     # Configuration
-    input_bucket = os.getenv("MINIO_BUCKET", "scraped-jobs")
-    output_bucket = os.getenv("MINIO_BUCKET", "processed-data")
+    input_bucket = os.getenv("INPUT_BUCKET", os.getenv("MINIO_BUCKET", "scraped-jobs"))
+    input_prefix = os.getenv("INPUT_PREFIX", "").strip("/")
+    output_bucket = os.getenv("OUTPUT_BUCKET", "processed-data")
 
-    input_path = f"s3a://{input_bucket}/*.html"
+    input_path = f"s3a://{input_bucket}/{input_prefix + '/' if input_prefix else ''}*.html"
     output_path = f"s3a://{output_bucket}/jobs_parsed"
 
     print(f"📋 Configuration:")

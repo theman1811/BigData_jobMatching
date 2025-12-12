@@ -146,6 +146,8 @@ class EmploiCIScraper(BaseJobScraperCI):
                 'title': title,
                 'company': company,
                 'location': location,
+                # Conserver le HTML brut pour sauvegarde MinIO / re-parsing
+                'html_content': str(job_element),
                 'description': description,
                 'contract_type': contract_type,
                 'job_type': contract_type,

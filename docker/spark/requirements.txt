@@ -1,0 +1,8 @@
+# ============================================
+# Spark Workers - Python Dependencies
+# ============================================
+# Ces dépendances sont nécessaires pour les UDFs
+# utilisées dans les jobs Spark (notamment parse_jobs.py)
+
+beautifulsoup4==4.12.2
+lxml==4.9.3

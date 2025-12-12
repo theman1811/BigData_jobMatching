@@ -182,6 +182,8 @@ class MacarriereproScraper(BaseJobScraperCI):
                 'title': title,
                 'company': company,
                 'location': location,
+                # On conserve le HTML brut pour MinIO afin de pouvoir rejouer le parsing au besoin
+                'html_content': str(job_element),
                 'description': description or title,  # Description ou titre comme fallback
                 'contract_type': contract_type,
                 'job_type': contract_type,

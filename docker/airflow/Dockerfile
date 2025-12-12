@@ -1,4 +1,4 @@
-FROM apache/airflow:2.8.0-python3.11
+FROM apache/airflow:2.8.0
 
 # Java requis par spark-submit (multi-arch arm64/amd64)
 USER root
@@ -13,7 +13,7 @@ ENV PATH="${JAVA_HOME}/bin:${PATH}"
 # Installer les providers en tant qu'utilisateur airflow
 USER airflow
 RUN pip install --no-cache-dir \
-    pyspark==3.4.0 \
+    pyspark==3.5.1 \
     apache-airflow-providers-apache-spark==4.5.0 \
     apache-airflow-providers-google==10.12.0 \
     apache-airflow-providers-docker==3.7.0

@@ -275,6 +275,8 @@ class LinkedInScraper(BaseJobScraperCI):
                 'title': title,
                 'company': company,
                 'location': location,
+                # HTML brut de la carte pour archivage MinIO / re-parsing
+                'html_content': job_card.get_attribute("outerHTML"),
                 'description': title,  # Sera enrichi lors du détail
                 'contract_type': job_type,
                 'job_type': job_type,

@@ -40,11 +40,26 @@ SPARK_CONF = {
     'spark.master': 'spark://spark-master:7077',
     'spark.sql.adaptive.enabled': 'true',
     'spark.sql.adaptive.coalescePartitions.enabled': 'true',
+    # Ressources executors/driver
+    'spark.executor.instances': '4',
+    'spark.executor.cores': '2',
+    'spark.executor.memory': '3g',
+    'spark.driver.memory': '2g',
+    # Prévenir les timeouts sur gros lots de fichiers
+    'spark.network.timeout': '600s',
+    'spark.executor.heartbeatInterval': '30s',
+    # Configuration MinIO (S3)
     'spark.hadoop.fs.s3a.endpoint': 'http://minio:9000',
     'spark.hadoop.fs.s3a.access.key': 'minioadmin',
     'spark.hadoop.fs.s3a.secret.key': 'minioadmin123',
     'spark.hadoop.fs.s3a.path.style.access': 'true',
-    'spark.jars.packages': 'com.google.cloud.spark:spark-bigquery-with-dependencies_2.12:0.32.2,org.apache.hadoop:hadoop-aws:3.3.4,com.amazonaws:aws-java-sdk-bundle:1.12.262'
+    # Configuration GCS (Google Cloud Storage)
+    'spark.hadoop.fs.gs.impl': 'com.google.cloud.hadoop.fs.gcs.GoogleHadoopFileSystem',
+    'spark.hadoop.fs.AbstractFileSystem.gs.impl': 'com.google.cloud.hadoop.fs.gcs.GoogleHadoopFS',
+    'spark.hadoop.google.cloud.auth.service.account.json.keyfile': '/opt/spark/credentials/bq-service-account.json',
+    'spark.hadoop.google.cloud.auth.service.account.enable': 'true',
+    # Packages
+    'spark.jars.packages': 'com.google.cloud.spark:spark-bigquery-with-dependencies_2.12:0.32.2,org.apache.hadoop:hadoop-aws:3.3.4,com.amazonaws:aws-java-sdk-bundle:1.12.262,com.google.cloud.bigdataoss:gcs-connector:hadoop3-2.2.5'
 }
 
 SPARK_ENV_VARS = {
@@ -104,11 +119,34 @@ spark_common_kwargs = {
     "dag": dag,
 }
 
-# 1. Parsing des offres HTML
+# 0. Fusion des petits fichiers HTML (DÉSACTIVÉ - trop lent sur setup local)
+# spark_merge_html = SparkSubmitOperator(
+#     task_id='spark_merge_html',
+#     application=f"{SPARK_APP_PATH}/merge_html.py",
+#     **{
+#         **spark_common_kwargs,
+#         "env_vars": {
+#             **spark_common_kwargs["env_vars"],
+#             "SOURCE_BUCKET": "scraped-jobs",
+#             "TARGET_PREFIX": "merged",
+#             "MERGE_PARTITIONS": "50",
+#         },
+#     }
+# )
+
+# 1. Parsing des offres HTML (lecture directe depuis scraped-jobs)
 spark_parse_jobs = SparkSubmitOperator(
     task_id='spark_parse_jobs',
     application=f"{SPARK_APP_PATH}/parse_jobs.py",
-    **spark_common_kwargs
+    **{
+        **spark_common_kwargs,
+        "env_vars": {
+            **spark_common_kwargs["env_vars"],
+            "MINIO_BUCKET": "scraped-jobs",  # bucket d'entrée
+            # INPUT_PREFIX non défini = lecture directe *.html à la racine
+            "BATCH_LIMIT": "300",             # Limite à 300 fichiers par run
+        },
+    }
 )
 
 # 2. Extraction des compétences (NLP)
@@ -125,12 +163,12 @@ spark_extract_salary = SparkSubmitOperator(
     **spark_common_kwargs
 )
 
-# 4. Déduplication
-spark_deduplicate = SparkSubmitOperator(
-    task_id='spark_deduplicate',
-    application=f"{SPARK_APP_PATH}/deduplicate.py",
-    **spark_common_kwargs
-)
+# 4. Déduplication (DÉSACTIVÉE - données d'entrée trop génériques)
+# spark_deduplicate = SparkSubmitOperator(
+#     task_id='spark_deduplicate',
+#     application=f"{SPARK_APP_PATH}/deduplicate.py",
+#     **spark_common_kwargs
+# )
 
 # 5. Extraction des secteurs (optionnel)
 spark_extract_sectors = SparkSubmitOperator(
@@ -153,5 +191,5 @@ check_processing_quality_task = PythonOperator(
 # DÉPENDANCES SÉQUENTIELLES
 # ============================================
 
-# Ordre d'exécution obligatoire
-spark_parse_jobs >> spark_extract_skills >> spark_extract_salary >> spark_deduplicate >> spark_extract_sectors >> check_processing_quality_task
+# Ordre d'exécution obligatoire (fusion et déduplication désactivées)
+spark_parse_jobs >> spark_extract_skills >> spark_extract_salary >> spark_extract_sectors >> check_processing_quality_task

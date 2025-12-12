@@ -23,7 +23,7 @@ from pyspark.sql.functions import (
     col, udf, lower, trim, regexp_replace, concat_ws,
     when, coalesce, current_timestamp, date_format,
     lit, struct, explode, collect_list, array_distinct,
-    row_number, desc, count
+    row_number, desc, count, avg
 )
 from pyspark.sql.types import (
     StructType, StructField, StringType, IntegerType, FloatType,
@@ -35,15 +35,23 @@ import re
 
 
 def create_spark_session():
-    """Crée la session Spark avec configuration BigQuery"""
+    """Crée la session Spark avec configuration BigQuery et GCS"""
     spark_master = os.getenv("SPARK_MASTER", "spark://spark-master:7077")
+    # Le chemin des credentials dépend du contexte (Airflow driver vs Spark executor)
+    gcp_credentials = os.getenv("GOOGLE_APPLICATION_CREDENTIALS", "/opt/spark/credentials/bq-service-account.json")
+    
     return SparkSession.builder \
         .appName("SectorExtractor") \
         .master(spark_master) \
         .config("spark.sql.adaptive.enabled", "true") \
         .config("spark.sql.adaptive.coalescePartitions.enabled", "true") \
+        .config("spark.hadoop.fs.gs.impl", "com.google.cloud.hadoop.fs.gcs.GoogleHadoopFileSystem") \
+        .config("spark.hadoop.fs.AbstractFileSystem.gs.impl", "com.google.cloud.hadoop.fs.gcs.GoogleHadoopFS") \
+        .config("spark.hadoop.google.cloud.auth.service.account.json.keyfile", "/opt/spark/credentials/bq-service-account.json") \
+        .config("spark.hadoop.google.cloud.auth.service.account.enable", "true") \
         .config("spark.jars.packages",
-                "com.google.cloud.spark:spark-bigquery-with-dependencies_2.12:0.32.2") \
+                "com.google.cloud.spark:spark-bigquery-with-dependencies_2.12:0.32.2,"
+                "com.google.cloud.bigdataoss:gcs-connector:hadoop3-2.2.5") \
         .getOrCreate()
 
 
@@ -413,13 +421,14 @@ def process_sector_extraction(spark, input_path, bigquery_dataset, gcp_project_i
 
     print(f"✅ {dim_secteur_df.count()} secteurs uniques identifiés")
 
-    # Étape 4: Charger Dim_Secteur dans BigQuery
+    # Étape 4: Charger Dim_Secteur dans BigQuery (optionnel, non bloquant)
     bq_options = {
         "project": gcp_project_id,
         "dataset": bigquery_dataset,
         "temporaryGcsBucket": f"{gcp_project_id}-temp-spark-bq"
     }
 
+    bq_success = False
     try:
         secteur_table = f"{bigquery_dataset}.Dim_Secteur"
 
@@ -430,17 +439,17 @@ def process_sector_extraction(spark, input_path, bigquery_dataset, gcp_project_i
             .mode("append") \
             .save()
 
-        print(f"✅ Dim_Secteur chargée ({dim_secteur_df.count()} secteurs)")
+        print(f"✅ Dim_Secteur chargée dans BigQuery ({dim_secteur_df.count()} secteurs)")
+        bq_success = True
 
     except Exception as e:
-        print(f"❌ Erreur chargement Dim_Secteur: {e}")
-        return {
-            "error": str(e),
-            "status": "FAILED"
-        }
+        print(f"⚠️  Erreur chargement Dim_Secteur dans BigQuery (non bloquant): {e}")
+        print("   → Continuation avec sauvegarde MinIO uniquement")
+        bq_success = False
 
     # Étape 5: Préparer les données finales avec vrais secteur_id
     enriched_jobs_df = classified_df \
+        .withColumn("source", coalesce(col("source"), lit("unknown"))) \
         .select(
             col("job_id"),
             col("source"),
@@ -454,7 +463,6 @@ def process_sector_extraction(spark, input_path, bigquery_dataset, gcp_project_i
             col("skills"),
             col("parsed_at"),
             col("parsing_quality_score"),
-            col("completeness_score"),
             col("secteur_id"),
             col("secteur_nom"),
             col("categorie_parent"),
@@ -495,6 +503,7 @@ def process_sector_extraction(spark, input_path, bigquery_dataset, gcp_project_i
         "avg_confidence": avg_confidence,
         "high_confidence_jobs": high_confidence_count,
         "dim_secteur_count": dim_secteur_df.count(),
+        "bigquery_success": bq_success,
         "status": "SUCCESS"
     }
 
