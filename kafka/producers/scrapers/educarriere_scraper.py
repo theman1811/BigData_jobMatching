@@ -115,8 +115,14 @@ class EducarriereScraper(BaseJobScraperCI):
             elif 'freelance' in title_lower or 'indépendant' in title_lower:
                 contract_type = 'Freelance'
 
-            # Créer l'ID unique
-            job_id = self.create_job_id('educarriere', code or title)
+            # Créer l'ID unique - Combiner plusieurs informations pour garantir l'unicité
+            # Utiliser l'URL si disponible (le plus unique), sinon code + titre + date
+            if offer_url:
+                unique_id = offer_url.replace(self.BASE_URL, '').strip('/')
+            else:
+                unique_id = f"{code}_{title}_{date_edition}".replace(' ', '_')
+            
+            job_id = self.create_job_id('educarriere', unique_id)
 
             # Extraire les compétences du titre
             detected_skills = super()._extract_skills_from_text(title)

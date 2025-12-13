@@ -275,9 +275,20 @@ class BaseJobScraperCI(ABC):
         return 'Non spécifié'
 
     def create_job_id(self, source: str, unique_identifier: str) -> str:
-        """Crée un ID unique pour l'offre d'emploi"""
+        """
+        Crée un ID unique pour l'offre d'emploi
+        
+        Args:
+            source: Source du scraper (ex: 'educarriere', 'linkedin')
+            unique_identifier: Identifiant unique de l'offre (code, URL, ou combinaison)
+        
+        Returns:
+            Hash MD5 (16 caractères) garantissant l'unicité de l'offre
+        """
         import hashlib
-        content = f"{source}_{unique_identifier}_{datetime.now().date()}"
+        # Ne plus inclure la date pour garantir l'unicité même si scraping multiple fois
+        # L'identifiant unique doit contenir toutes les infos nécessaires
+        content = f"{source}_{unique_identifier}"
         return hashlib.md5(content.encode()).hexdigest()[:16]
 
     def send_to_kafka(self, job_data: Dict[str, Any], key: Optional[str] = None) -> bool:

@@ -136,8 +136,13 @@ class MacarriereproScraper(BaseJobScraperCI):
             if offer_url and not offer_url.startswith('http'):
                 offer_url = f"{self.BASE_URL}{offer_url}"
 
-            # Créer l'ID unique
-            job_id = self.create_job_id('macarrierepro', f"{title}_{company}_{posted_date}")
+            # Créer l'ID unique - Utiliser l'URL si disponible (le plus unique)
+            if offer_url:
+                unique_id = offer_url.replace(self.BASE_URL, '').strip('/')
+            else:
+                unique_id = f"{title}_{company}_{posted_date}".replace(' ', '_')
+            
+            job_id = self.create_job_id('macarrierepro', unique_id)
 
             # Détection de compétences basée sur le titre
             detected_skills = []

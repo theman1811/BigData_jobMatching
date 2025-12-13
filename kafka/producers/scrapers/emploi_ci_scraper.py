@@ -138,7 +138,13 @@ class EmploiCIScraper(BaseJobScraperCI):
                     break
             description = desc_elem.get_text(strip=True) if desc_elem else title
 
-            job_id = self.create_job_id('goafricaonline', f"{title}_{company}_{posted_date}")
+            # Créer l'ID unique - Utiliser l'URL si disponible (le plus unique)
+            if offer_url:
+                unique_id = offer_url.replace(self.BASE_URL, '').strip('/')
+            else:
+                unique_id = f"{title}_{company}_{posted_date}".replace(' ', '_')
+            
+            job_id = self.create_job_id('goafricaonline', unique_id)
             detected_skills = self._extract_skills_from_text(f"{title} {description}")
 
             job_data = {

@@ -73,11 +73,18 @@ load_offers_task = SparkSubmitOperator(
     conf={
         'spark.sql.adaptive.enabled': 'true',
         'spark.sql.adaptive.coalescePartitions.enabled': 'true',
+        # Configuration MinIO (S3)
         'spark.hadoop.fs.s3a.endpoint': 'http://minio:9000',
         'spark.hadoop.fs.s3a.access.key': 'minioadmin',
         'spark.hadoop.fs.s3a.secret.key': 'minioadmin123',
         'spark.hadoop.fs.s3a.path.style.access': 'true',
-        'spark.jars.packages': 'com.google.cloud.spark:spark-bigquery-with-dependencies_2.12:0.32.2'
+        # Configuration GCS (Google Cloud Storage) - Gardé en secours mais non utilisé avec writeMethod=direct
+        'spark.hadoop.fs.gs.impl': 'com.google.cloud.hadoop.fs.gcs.GoogleHadoopFileSystem',
+        'spark.hadoop.fs.AbstractFileSystem.gs.impl': 'com.google.cloud.hadoop.fs.gcs.GoogleHadoopFS',
+        'spark.hadoop.google.cloud.auth.service.account.json.keyfile': '/opt/airflow/credentials/bq-service-account.json',
+        'spark.hadoop.google.cloud.auth.service.account.enable': 'true',
+        # Packages - Le connecteur GCS est gardé en secours mais writeMethod=direct évite son utilisation
+        'spark.jars.packages': 'com.google.cloud.spark:spark-bigquery-with-dependencies_2.12:0.32.2,org.apache.hadoop:hadoop-aws:3.3.4,com.amazonaws:aws-java-sdk-bundle:1.12.262'
     },
     env_vars={
         'GCP_PROJECT_ID': GCP_PROJECT_ID,

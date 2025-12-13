@@ -263,8 +263,15 @@ class LinkedInScraper(BaseJobScraperCI):
             link_elem = job_card.find_element(By.CSS_SELECTOR, "a.job-card-container__link")
             job_url = link_elem.get_attribute("href") or ""
 
-            # Créer l'ID unique
-            job_id = self.create_job_id('linkedin', f"{title}_{company}_{posted_date}")
+            # Créer l'ID unique - Utiliser l'URL si disponible (le plus unique)
+            if job_url:
+                # LinkedIn URLs contiennent des IDs uniques, extraire la partie pertinente
+                unique_id = job_url.split('?')[0]  # Enlever les paramètres de requête
+                unique_id = unique_id.replace('https://', '').replace('http://', '')
+            else:
+                unique_id = f"{title}_{company}_{posted_date}".replace(' ', '_')
+            
+            job_id = self.create_job_id('linkedin', unique_id)
 
             # Analyse du titre pour compétences
             detected_skills = self._extract_linkedin_skills(title + " " + company)

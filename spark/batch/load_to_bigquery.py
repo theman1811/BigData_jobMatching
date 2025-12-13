@@ -80,6 +80,13 @@ def generate_competence_id(skill_name):
     return f"COMP_{clean_skill[:20]}"
 
 
+def generate_competence_ids_array(skills_array):
+    """Génère un array d'IDs de compétences depuis un array de noms"""
+    if not skills_array:
+        return []
+    return [generate_competence_id(skill) for skill in skills_array if skill]
+
+
 def parse_salary_amount(salary_text):
     """Parse le montant salarial depuis le texte"""
     if not salary_text:
@@ -100,7 +107,8 @@ def parse_salary_amount(salary_text):
         if match:
             amount_str = match.group(1).replace(' ', '').replace(',', '').replace('.', '')
             try:
-                return int(amount_str)
+                # Retourner un float pour correspondre au schéma BigQuery FLOAT64
+                return float(amount_str)
             except ValueError:
                 continue
 
@@ -145,7 +153,8 @@ def process_bigquery_load(spark, input_path, bigquery_dataset, gcp_project_id):
     spark.udf.register("generate_entreprise_id", generate_entreprise_id, StringType())
     spark.udf.register("generate_localisation_id", generate_localisation_id, StringType())
     spark.udf.register("generate_competence_id", generate_competence_id, StringType())
-    spark.udf.register("parse_salary_amount", parse_salary_amount, IntegerType())
+    spark.udf.register("generate_competence_ids_array", generate_competence_ids_array, ArrayType(StringType()))
+    spark.udf.register("parse_salary_amount", parse_salary_amount, FloatType())
     spark.udf.register("infer_experience_level", infer_experience_level, StringType())
 
     print("✅ UDFs enregistrées")
@@ -155,6 +164,7 @@ def process_bigquery_load(spark, input_path, bigquery_dataset, gcp_project_id):
     # ============================================
 
     # Transformer les données pour Fact_OffresEmploi
+    # IMPORTANT: Sélectionner uniquement les colonnes correspondant au schéma BigQuery
     fact_offres_df = jobs_df \
         .withColumn("offre_id", col("job_id")) \
         .withColumn("titre_poste", trim(col("title"))) \
@@ -166,25 +176,50 @@ def process_bigquery_load(spark, input_path, bigquery_dataset, gcp_project_id):
         .withColumn("type_contrat", col("contract_type")) \
         .withColumn("niveau_experience",
                    expr("infer_experience_level(title, description)")) \
-        .withColumn("teletravail", lit(False)) \
-        .withColumn("taux_teletravail", lit(0)) \
+        .withColumn("teletravail", lit(False).cast(BooleanType())) \
+        .withColumn("taux_teletravail", lit(0).cast(IntegerType())) \
         .withColumn("salaire_min",
-                   expr("parse_salary_amount(parsed_salary_text)")) \
+                   expr("parse_salary_amount(parsed_salary_text)").cast(FloatType())) \
         .withColumn("salaire_max",
-                   expr("parse_salary_amount(parsed_salary_text)")) \
+                   expr("parse_salary_amount(parsed_salary_text)").cast(FloatType())) \
         .withColumn("devise", lit("FCFA")) \
         .withColumn("competences", col("skills")) \
         .withColumn("competences_ids",
-                   expr("transform(skills, x -> generate_competence_id(x))")) \
+                   expr("generate_competence_ids_array(skills)")) \
         .withColumn("source_site", col("source")) \
         .withColumn("url_offre", lit(None).cast(StringType())) \
         .withColumn("date_publication", to_date(col("parsed_at"))) \
         .withColumn("date_expiration", lit(None).cast(DateType())) \
-        .withColumn("scraped_at", col("parsed_at")) \
+        .withColumn("scraped_at", col("parsed_at").cast(TimestampType())) \
         .withColumn("last_updated", current_timestamp()) \
         .withColumn("statut", lit("ACTIVE")) \
-        .withColumn("nombre_vues", lit(0)) \
-        .withColumn("nombre_candidatures", lit(0))
+        .withColumn("nombre_vues", lit(0).cast(IntegerType())) \
+        .withColumn("nombre_candidatures", lit(0).cast(IntegerType())) \
+        .select(
+            "offre_id",
+            "titre_poste",
+            "entreprise_id",
+            "localisation_id",
+            "secteur_id",
+            "type_contrat",
+            "niveau_experience",
+            "teletravail",
+            "taux_teletravail",
+            "salaire_min",
+            "salaire_max",
+            "devise",
+            "competences",
+            "competences_ids",
+            "source_site",
+            "url_offre",
+            "date_publication",
+            "date_expiration",
+            "scraped_at",
+            "last_updated",
+            "statut",
+            "nombre_vues",
+            "nombre_candidatures"
+        )
 
     print("✅ Données Fact_OffresEmploi préparées")
 
@@ -203,7 +238,16 @@ def process_bigquery_load(spark, input_path, bigquery_dataset, gcp_project_id):
         .withColumn("created_at", current_timestamp()) \
         .withColumn("updated_at", current_timestamp()) \
         .filter(col("company").isNotNull()) \
-        .dropDuplicates(["entreprise_id"])
+        .dropDuplicates(["entreprise_id"]) \
+        .select(
+            "entreprise_id",
+            "nom_entreprise",
+            "secteur_id",
+            "taille_entreprise",
+            "site_web",
+            "created_at",
+            "updated_at"
+        )
 
     print("✅ Données Dim_Entreprise préparées")
 
@@ -224,7 +268,18 @@ def process_bigquery_load(spark, input_path, bigquery_dataset, gcp_project_id):
         .withColumn("longitude", lit(None).cast(FloatType())) \
         .withColumn("created_at", current_timestamp()) \
         .filter(col("location").isNotNull()) \
-        .dropDuplicates(["localisation_id"])
+        .dropDuplicates(["localisation_id"]) \
+        .select(
+            "localisation_id",
+            "ville",
+            "code_postal",
+            "region",
+            "departement",
+            "pays",
+            "latitude",
+            "longitude",
+            "created_at"
+        )
 
     print("✅ Données Dim_Localisation préparées")
 
@@ -248,7 +303,15 @@ def process_bigquery_load(spark, input_path, bigquery_dataset, gcp_project_id):
         .withColumn("popularite_score", lit(1.0)) \
         .withColumn("created_at", current_timestamp()) \
         .filter(col("competence_id").isNotNull()) \
-        .dropDuplicates(["competence_id"])
+        .dropDuplicates(["competence_id"]) \
+        .select(
+            "competence_id",
+            "nom_competence",
+            "categorie",
+            "niveau_demande",
+            "popularite_score",
+            "created_at"
+        )
 
     print("✅ Données Dim_Competence préparées")
 
@@ -259,7 +322,9 @@ def process_bigquery_load(spark, input_path, bigquery_dataset, gcp_project_id):
     bq_options = {
         "project": gcp_project_id,
         "dataset": bigquery_dataset,
-        "temporaryGcsBucket": f"{gcp_project_id}-temp-spark-bq"
+        "temporaryGcsBucket": f"{gcp_project_id}-temp-spark-bq",
+        "allowFieldAddition": "true",
+        "allowSchemaEvolution": "true"
     }
 
     try:
@@ -280,6 +345,7 @@ def process_bigquery_load(spark, input_path, bigquery_dataset, gcp_project_id):
         dim_entreprise_df.write \
             .format("bigquery") \
             .option("table", entreprise_table) \
+            .option("writeMethod", "direct") \
             .options(**bq_options) \
             .mode("append") \
             .save()
@@ -291,6 +357,7 @@ def process_bigquery_load(spark, input_path, bigquery_dataset, gcp_project_id):
         dim_localisation_df.write \
             .format("bigquery") \
             .option("table", localisation_table) \
+            .option("writeMethod", "direct") \
             .options(**bq_options) \
             .mode("append") \
             .save()
@@ -302,6 +369,7 @@ def process_bigquery_load(spark, input_path, bigquery_dataset, gcp_project_id):
         dim_competence_df.write \
             .format("bigquery") \
             .option("table", competence_table) \
+            .option("writeMethod", "direct") \
             .options(**bq_options) \
             .mode("append") \
             .save()
