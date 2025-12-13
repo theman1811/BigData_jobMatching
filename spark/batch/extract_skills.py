@@ -23,7 +23,7 @@ from pyspark.sql.functions import (
     col, udf, lower, trim, regexp_replace, concat_ws,
     explode, collect_list, struct, when, coalesce,
     current_timestamp, date_format, size, array_distinct,
-    arrays_zip, array_union, lit, array, transform
+    arrays_zip, array_union, lit, array
 )
 from pyspark.sql.types import (
     StructType, StructField, StringType, IntegerType, FloatType,
@@ -275,7 +275,7 @@ def process_skills_extraction(spark, input_path, output_path):
         output_path: Chemin MinIO destination
     """
 
-    # Enregistrer les UDFs
+    # Enregistrer les UDFs Python
     extract_skills_nlp = udf(extract_skills_nlp_udf, ArrayType(StringType()))
     classify_category = udf(classify_skill_category_udf, StringType())
     calculate_confidence = udf(calculate_skill_confidence_udf, FloatType())
@@ -310,22 +310,60 @@ def process_skills_extraction(spark, input_path, output_path):
     print("✅ Fusion des compétences existantes et extraites")
 
     # Étape 3: Enrichissement avec métadonnées des compétences
-    skills_with_metadata_df = final_skills_df \
-        .withColumn("skills_with_metadata",
-                   when(size(col("unique_skills")) > 0,
-                       arrays_zip(
-                           col("unique_skills"),
-                           transform(col("unique_skills"),
-                                   lambda skill: classify_category(skill)),
-                           transform(col("unique_skills"),
-                                   lambda skill: calculate_confidence(
-                                       skill,
-                                       coalesce(col("description"), lit("")) + " " +
-                                       coalesce(col("requirements"), lit(""))
-                                   ))
-                       )
-                   ).otherwise(array())
-                   )
+    # Utiliser le pattern explode → apply UDFs → collect_list
+    # car les UDFs Python ne peuvent pas être utilisées directement dans transform()
+    
+    # Créer une colonne temporaire pour le contexte (description + requirements)
+    skills_with_context_df = final_skills_df \
+        .withColumn("skill_context",
+                   concat_ws(" ",
+                       coalesce(col("description"), lit("")),
+                       coalesce(col("requirements"), lit(""))
+                   ))
+    
+    # Vérifier s'il y a des compétences à traiter
+    jobs_with_skills_count = skills_with_context_df.filter(size(col("unique_skills")) > 0).count()
+    print(f"📊 Offres avec compétences à enrichir: {jobs_with_skills_count}")
+    
+    if jobs_with_skills_count > 0:
+        # Exploser les compétences pour appliquer les UDFs individuellement
+        exploded_df = skills_with_context_df \
+            .filter(size(col("unique_skills")) > 0) \
+            .select(
+                col("job_id"),
+                col("skill_context"),
+                explode(col("unique_skills")).alias("skill_name")
+            )
+        
+        # Appliquer les UDFs à chaque compétence
+        skills_enriched_df = exploded_df \
+            .withColumn("skill_category", classify_category(col("skill_name"))) \
+            .withColumn("skill_confidence", calculate_confidence(col("skill_name"), col("skill_context")))
+        
+        # Regrouper les compétences enrichies par job_id
+        skills_grouped_df = skills_enriched_df \
+            .groupBy("job_id") \
+            .agg(
+                collect_list(
+                    struct(
+                        col("skill_name").alias("0"),
+                        col("skill_category").alias("1"),
+                        col("skill_confidence").alias("2")
+                    )
+                ).alias("skills_with_metadata")
+            )
+        
+        # Joindre avec le DataFrame original
+        skills_with_metadata_df = skills_with_context_df \
+            .join(skills_grouped_df, "job_id", "left") \
+            .withColumn("skills_with_metadata",
+                       coalesce(col("skills_with_metadata"), array())) \
+            .drop("skill_context")
+    else:
+        # Aucune compétence à enrichir
+        skills_with_metadata_df = skills_with_context_df \
+            .withColumn("skills_with_metadata", array()) \
+            .drop("skill_context")
 
     print("✅ Métadonnées des compétences ajoutées")
 
@@ -366,10 +404,12 @@ def process_skills_extraction(spark, input_path, output_path):
 
     avg_skills = skills_stats_df[0][0] if skills_stats_df else 0
 
+    jobs_with_skills = output_df.filter(size(col('skills')) > 0).count()
+    
     print("📊 Statistiques d'extraction de compétences:")
     print(f"   Offres traitées: {total_jobs}")
-    print(".2f")
-    print(f"   Offres avec compétences: {output_df.filter(size(col('skills')) > 0).count()}")
+    print(f"   Compétences moyennes par offre: {avg_skills:.2f}")
+    print(f"   Offres avec compétences: {jobs_with_skills}")
 
     return {
         "total_jobs": total_jobs,

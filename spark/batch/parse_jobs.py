@@ -8,6 +8,8 @@ et extraire les informations structurées.
 
 Source: s3a://scraped-jobs/
 Destination: s3a://processed-data/jobs_parsed/
+
+Format des fichiers: JSON métadonnées + "\n\n" + HTML content
 """
 
 import os
@@ -17,7 +19,7 @@ from pyspark.sql import SparkSession
 from pyspark.sql.functions import (
     col, udf, regexp_extract, regexp_replace, trim, lower,
     when, coalesce, length, split, explode, array_distinct,
-    current_timestamp, date_format, lit, array, size
+    current_timestamp, date_format, lit, array, size, substring, expr, locate, decode
 )
 from pyspark.sql.types import (
     StructType, StructField, StringType, IntegerType, FloatType,
@@ -47,27 +49,60 @@ def extract_title_udf(html_content):
     if not html_content:
         return None
 
+    # Mots à exclure des titres (faux positifs)
+    excluded_words = ['partager', 'partagez', 'share', 'menu', 'navigation', 
+                      'accueil', 'home', 'footer', 'header', 'sidebar']
+
+    def is_valid_title(text):
+        """Vérifie si le texte est un titre valide"""
+        if not text or len(text) < 5 or len(text) > 200:
+            return False
+        text_lower = text.lower()
+        return not any(word in text_lower for word in excluded_words)
+
     try:
         soup = BeautifulSoup(html_content, 'html.parser')
 
-        # Patterns courants pour les titres d'offres
+        # Sélecteurs prioritaires pour les titres d'offres (ordre important)
         title_selectors = [
+            # Sélecteurs spécifiques aux sites d'emploi
             'h1.job-title', 'h1.title', '.job-title h1', '.offer-title',
-            'h1', '.title', '[class*="title"]', '[class*="job"]'
+            '.bread-title', '.job-title', '.position-title', '.vacancy-title',
+            # Balises h1, h2, h3 génériques
+            'h1', 'h2.title', 'h3.title',
+            # Sélecteurs avec attributs
+            '[class*="job-title"]', '[class*="offer-title"]', '[class*="position-title"]',
         ]
 
         for selector in title_selectors:
             elements = soup.select(selector)
-            if elements:
-                title = elements[0].get_text(strip=True)
-                if title and len(title) > 5:  # Titre valide
+            for elem in elements:
+                title = elem.get_text(strip=True)
+                if is_valid_title(title):
                     return title
 
-        # Fallback: chercher dans le titre de la page
+        # Fallback: chercher dans le titre de la page (souvent contient le titre de l'offre)
         if soup.title:
-            title = soup.title.get_text(strip=True)
-            if title and len(title) > 5:
-                return title
+            page_title = soup.title.get_text(strip=True)
+            # Nettoyer le titre de page (enlever le nom du site)
+            for sep in [' | ', ' - ', ' :: ', ' — ']:
+                if sep in page_title:
+                    parts = page_title.split(sep)
+                    # Prendre la partie la plus longue qui semble être le titre
+                    for part in parts:
+                        if is_valid_title(part.strip()):
+                            return part.strip()
+            # Si pas de séparateur, utiliser le titre complet
+            if is_valid_title(page_title):
+                return page_title
+
+        # Dernier recours: sélecteurs génériques avec [class*="title"]
+        for selector in ['[class*="title"]']:
+            elements = soup.select(selector)
+            for elem in elements:
+                title = elem.get_text(strip=True)
+                if is_valid_title(title):
+                    return title
 
     except Exception as e:
         print(f"Erreur extraction titre: {e}")
@@ -362,7 +397,7 @@ def process_job_parsing(spark, input_path, output_path):
 
     Args:
         spark: SparkSession
-        input_path: Chemin MinIO source (HTML)
+        input_path: Chemin MinIO source (HTML compressé gzip)
         output_path: Chemin MinIO destination (Parquet)
     """
 
@@ -378,55 +413,126 @@ def process_job_parsing(spark, input_path, output_path):
 
     print("✅ UDFs enregistrées")
 
-    # Lire les données HTML depuis MinIO avec limitation de lot
+    # Lire les fichiers HTML depuis MinIO
+    # Les fichiers sont au format: JSON metadata + "\n\n" + HTML content
     max_files = int(os.getenv("BATCH_LIMIT", "0"))
     
-    if max_files > 0:
-        # Lister les fichiers et n'en prendre qu'un sous-ensemble
-        from py4j.java_gateway import java_import
-        java_import(spark._jvm, 'org.apache.hadoop.fs.Path')
-        java_import(spark._jvm, 'org.apache.hadoop.fs.FileSystem')
-        
-        hadoop_conf = spark._jsc.hadoopConfiguration()
-        fs = spark._jvm.FileSystem.get(spark._jvm.java.net.URI(input_path.split('*')[0]), hadoop_conf)
-        path = spark._jvm.Path(input_path.replace('*.html', ''))
-        
-        # Lister tous les fichiers HTML
-        file_status = fs.listStatus(path)
-        html_files = [f.getPath().toString() for f in file_status if f.getPath().toString().endswith('.html')][:max_files]
-        
-        print(f"📁 {len(html_files)} fichiers HTML sélectionnés sur {len([f for f in file_status if f.getPath().toString().endswith('.html')])} disponibles")
-        
-        # Lire uniquement les fichiers sélectionnés
-        if html_files:
-            html_df = spark.read.text(html_files).repartition(30)
-        else:
-            raise ValueError("Aucun fichier HTML trouvé")
-    else:
-        # Pas de limite : lire tous les fichiers
-        html_df = spark.read.text(input_path).repartition(30)
+    # Préparer la liste des fichiers à traiter
+    from py4j.java_gateway import java_import
+    java_import(spark._jvm, 'org.apache.hadoop.fs.Path')
+    java_import(spark._jvm, 'org.apache.hadoop.fs.FileSystem')
     
-    print(f"✅ Données HTML lues depuis {input_path}")
+    hadoop_conf = spark._jsc.hadoopConfiguration()
+    base_path = input_path.split('*')[0]
+    fs = spark._jvm.FileSystem.get(spark._jvm.java.net.URI(base_path), hadoop_conf)
+    path = spark._jvm.Path(input_path.replace('*.html', ''))
+    
+    # Lister tous les fichiers HTML
+    file_status = fs.listStatus(path)
+    all_html_files = [f.getPath().toString() for f in file_status if f.getPath().toString().endswith('.html')]
+    
+    if max_files > 0:
+        html_files = all_html_files[:max_files]
+        print(f"📁 {len(html_files)} fichiers HTML sélectionnés sur {len(all_html_files)} disponibles")
+    else:
+        html_files = all_html_files
+        print(f"📁 {len(html_files)} fichiers HTML trouvés")
+    
+    if not html_files:
+        raise ValueError("Aucun fichier HTML trouvé")
+    
+    # Lire les fichiers avec binaryFile pour avoir le contenu complet
+    # binaryFile est plus fiable que text avec wholetext pour S3A
+    html_df = spark.read \
+        .format("binaryFile") \
+        .load(html_files)
+    
+    # Décoder le contenu binaire en texte UTF-8
+    # La colonne 'content' contient les bytes, 'path' contient le chemin
+    html_df = html_df.withColumn(
+        'value',
+        decode(col('content'), 'UTF-8')
+    ).select('path', 'value')
+    
+    # Appliquer la limite si nécessaire
+    if max_files > 0:
+        html_df = html_df.limit(max_files)
+    
+    file_count = html_df.count()
+    print(f"✅ {file_count} fichiers HTML lus depuis {input_path}")
+    
+    # DEBUG: Afficher un échantillon du contenu brut
+    print("🔍 DEBUG - Échantillon du contenu brut (value):")
+    html_df.select(length(col('value')).alias('content_length')).show(5)
+    
+    # DEBUG: Afficher les premiers caractères pour vérifier le format
+    print("🔍 DEBUG - Premiers 250 caractères:")
+    html_df.select(substring(col('value'), 1, 250).alias('start')).show(1, truncate=False)
 
     # Parser le format de stockage (métadonnées + HTML)
-    # Format: JSON métadonnées\n\nHTML content
+    # Format: JSON multi-ligne suivi de \n\n puis HTML (commence par <!DOCTYPE ou <html)
+    # 
+    # Approche: trouver la position de <!DOCTYPE ou <html et séparer avant/après
+    # locate() retourne la position 1-based du premier caractère trouvé
     parsed_df = html_df.withColumn(
-        'content_parts',
-        split(col('value'), '\n\n', 2)
-    ).withColumn(
-        'metadata_json', col('content_parts').getItem(0)
-    ).withColumn(
-        'html_content', col('content_parts').getItem(1)
+        # Trouver où commence le HTML (<!DOCTYPE ou <html)
+        'html_start_pos',
+        # Chercher <!DOCTYPE d'abord, sinon <html
+        when(
+            locate('<!DOCTYPE', col('value')) > 0,
+            locate('<!DOCTYPE', col('value'))
+        ).otherwise(
+            locate('<html', col('value'))
+        )
     )
+    
+    # Utiliser expr() pour les opérations sur colonnes dans substring
+    parsed_df = parsed_df.withColumn(
+        # Métadonnées = tout ce qui précède le HTML (moins les newlines)
+        'metadata_json',
+        trim(expr("substring(value, 1, html_start_pos - 1)"))
+    ).withColumn(
+        # HTML = tout à partir de <!DOCTYPE ou <html
+        'html_content',
+        expr("substring(value, html_start_pos)")
+    )
+    
+    # DEBUG: Vérifier les positions trouvées
+    print("🔍 DEBUG - Positions HTML trouvées:")
+    parsed_df.select('html_start_pos').show(5)
+    
+    # DEBUG: Vérifier le résultat du split
+    print("🔍 DEBUG - Après split:")
+    parsed_df.select(
+        length(col('metadata_json')).alias('metadata_len'),
+        length(col('html_content')).alias('html_len')
+    ).show(5)
+    
+    # DEBUG: Compter les NULLs
+    null_html_count = parsed_df.filter(col('html_content').isNull()).count()
+    print(f"🔍 DEBUG - Fichiers avec html_content NULL: {null_html_count}/{file_count}")
 
     # Extraire les métadonnées JSON
+    # Utiliser le chemin du fichier comme fallback pour job_id
     metadata_df = parsed_df.withColumn(
         'job_id',
-        regexp_extract(col('metadata_json'), r'"job_id"\s*:\s*"([^"]+)"', 1)
+        coalesce(
+            # D'abord essayer d'extraire du JSON
+            regexp_extract(col('metadata_json'), r'"job_id"\s*:\s*"([^"]+)"', 1),
+            # Sinon extraire du nom de fichier (ex: s3a://bucket/abc123.html -> abc123)
+            regexp_extract(col('path'), r'/([^/]+)\.html$', 1)
+        )
     ).withColumn(
         'source',
-        regexp_extract(col('metadata_json'), r'"source"\s*:\s*"([^"]+)"', 1)
+        coalesce(
+            regexp_extract(col('metadata_json'), r'"source"\s*:\s*"([^"]+)"', 1),
+            lit('Unknown')
+        )
     )
+    
+    # DEBUG: Vérifier l'extraction des métadonnées
+    print("🔍 DEBUG - Métadonnées extraites (échantillon):")
+    metadata_df.select('job_id', 'source').show(5, truncate=False)
 
     print("✅ Métadonnées extraites")
 
@@ -444,6 +550,22 @@ def process_job_parsing(spark, input_path, output_path):
         ))
 
     print("✅ Parsing HTML appliqué")
+    
+    # DEBUG: Vérifier les résultats du parsing
+    print("🔍 DEBUG - Résultats parsing (échantillon):")
+    parsed_jobs_df.select(
+        'job_id',
+        length(col('parsed_title')).alias('title_len'),
+        length(col('parsed_description')).alias('desc_len'),
+        length(col('parsed_company')).alias('company_len')
+    ).show(5)
+    
+    # DEBUG: Compter les NULLs après parsing
+    null_title = parsed_jobs_df.filter(col('parsed_title').isNull()).count()
+    null_desc = parsed_jobs_df.filter(col('parsed_description').isNull()).count()
+    null_company = parsed_jobs_df.filter(col('parsed_company').isNull()).count()
+    total = parsed_jobs_df.count()
+    print(f"🔍 DEBUG - NULL counts: title={null_title}/{total}, desc={null_desc}/{total}, company={null_company}/{total}")
 
     # Fusionner avec les données existantes (si elles existent)
     # et gérer les valeurs manquantes
