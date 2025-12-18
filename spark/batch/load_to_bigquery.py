@@ -316,7 +316,7 @@ def process_bigquery_load(spark, input_path, bigquery_dataset, gcp_project_id):
     print("✅ Données Dim_Competence préparées")
 
     # ============================================
-    # CHARGEMENT VERS BIGQUERY
+    # CHARGEMENT VERS BIGQUERY AVEC DÉDUPLICATION
     # ============================================
 
     bq_options = {
@@ -328,59 +328,220 @@ def process_bigquery_load(spark, input_path, bigquery_dataset, gcp_project_id):
     }
 
     try:
-        # Charger Fact_OffresEmploi
+        # ============================================
+        # 1. FACT_OFFRESEMPLOI - Déduplication avant insertion
+        # ============================================
         fact_table = f"{bigquery_dataset}.Fact_OffresEmploi"
-        fact_offres_df.write \
-            .format("bigquery") \
-            .option("table", fact_table) \
-            .option("writeMethod", "direct") \
-            .options(**bq_options) \
-            .mode("append") \
-            .save()
+        
+        print(f"📊 Vérification des offres existantes dans {fact_table}...")
+        
+        try:
+            # Lire les offre_id existants depuis BigQuery
+            existing_offres = spark.read \
+                .format("bigquery") \
+                .option("table", fact_table) \
+                .load() \
+                .select("offre_id") \
+                .distinct()
+            
+            existing_count = existing_offres.count()
+            print(f"✅ {existing_count} offres existantes trouvées dans BigQuery")
+            
+            # Filtrer pour ne garder que les nouvelles offres (LEFT ANTI JOIN)
+            new_offres = fact_offres_df.join(
+                existing_offres,
+                on="offre_id",
+                how="left_anti"  # Garder uniquement ce qui n'existe pas dans existing_offres
+            )
+            
+            new_count = new_offres.count()
+            total_count = fact_offres_df.count()
+            
+            print(f"📈 {new_count} nouvelles offres à insérer (sur {total_count} au total)")
+            
+            if new_count > 0:
+                # Insérer uniquement les nouvelles offres
+                new_offres.write \
+                    .format("bigquery") \
+                    .option("table", fact_table) \
+                    .option("writeMethod", "direct") \
+                    .options(**bq_options) \
+                    .mode("append") \
+                    .save()
+                
+                print(f"✅ Fact_OffresEmploi chargée ({new_count} nouvelles lignes)")
+            else:
+                print(f"ℹ️ Aucune nouvelle offre à insérer (toutes existent déjà)")
+        
+        except Exception as e:
+            # Si la table n'existe pas encore, insérer toutes les offres
+            if "Not found: Table" in str(e) or "404" in str(e):
+                print(f"⚠️ Table {fact_table} n'existe pas encore, création...")
+                fact_offres_df.write \
+                    .format("bigquery") \
+                    .option("table", fact_table) \
+                    .option("writeMethod", "direct") \
+                    .options(**bq_options) \
+                    .mode("append") \
+                    .save()
+                
+                new_count = fact_offres_df.count()
+                print(f"✅ Fact_OffresEmploi créée et chargée ({new_count} lignes)")
+            else:
+                raise
 
-        print(f"✅ Fact_OffresEmploi chargée ({fact_offres_df.count()} lignes)")
-
-        # Charger Dim_Entreprise (upsert)
+        # ============================================
+        # 2. DIM_ENTREPRISE - Déduplication avant insertion
+        # ============================================
         entreprise_table = f"{bigquery_dataset}.Dim_Entreprise"
-        dim_entreprise_df.write \
-            .format("bigquery") \
-            .option("table", entreprise_table) \
-            .option("writeMethod", "direct") \
-            .options(**bq_options) \
-            .mode("append") \
-            .save()
+        
+        try:
+            existing_entreprises = spark.read \
+                .format("bigquery") \
+                .option("table", entreprise_table) \
+                .load() \
+                .select("entreprise_id") \
+                .distinct()
+            
+            new_entreprises = dim_entreprise_df.join(
+                existing_entreprises,
+                on="entreprise_id",
+                how="left_anti"
+            )
+            
+            new_entr_count = new_entreprises.count()
+            
+            if new_entr_count > 0:
+                new_entreprises.write \
+                    .format("bigquery") \
+                    .option("table", entreprise_table) \
+                    .option("writeMethod", "direct") \
+                    .options(**bq_options) \
+                    .mode("append") \
+                    .save()
+                
+                print(f"✅ Dim_Entreprise chargée ({new_entr_count} nouvelles lignes)")
+            else:
+                print(f"ℹ️ Aucune nouvelle entreprise à insérer")
+        
+        except Exception as e:
+            if "Not found: Table" in str(e) or "404" in str(e):
+                dim_entreprise_df.write \
+                    .format("bigquery") \
+                    .option("table", entreprise_table) \
+                    .option("writeMethod", "direct") \
+                    .options(**bq_options) \
+                    .mode("append") \
+                    .save()
+                
+                new_entr_count = dim_entreprise_df.count()
+                print(f"✅ Dim_Entreprise créée et chargée ({new_entr_count} lignes)")
+            else:
+                raise
 
-        print(f"✅ Dim_Entreprise chargée ({dim_entreprise_df.count()} lignes)")
-
-        # Charger Dim_Localisation (upsert)
+        # ============================================
+        # 3. DIM_LOCALISATION - Déduplication avant insertion
+        # ============================================
         localisation_table = f"{bigquery_dataset}.Dim_Localisation"
-        dim_localisation_df.write \
-            .format("bigquery") \
-            .option("table", localisation_table) \
-            .option("writeMethod", "direct") \
-            .options(**bq_options) \
-            .mode("append") \
-            .save()
+        
+        try:
+            existing_localisations = spark.read \
+                .format("bigquery") \
+                .option("table", localisation_table) \
+                .load() \
+                .select("localisation_id") \
+                .distinct()
+            
+            new_localisations = dim_localisation_df.join(
+                existing_localisations,
+                on="localisation_id",
+                how="left_anti"
+            )
+            
+            new_loc_count = new_localisations.count()
+            
+            if new_loc_count > 0:
+                new_localisations.write \
+                    .format("bigquery") \
+                    .option("table", localisation_table) \
+                    .option("writeMethod", "direct") \
+                    .options(**bq_options) \
+                    .mode("append") \
+                    .save()
+                
+                print(f"✅ Dim_Localisation chargée ({new_loc_count} nouvelles lignes)")
+            else:
+                print(f"ℹ️ Aucune nouvelle localisation à insérer")
+        
+        except Exception as e:
+            if "Not found: Table" in str(e) or "404" in str(e):
+                dim_localisation_df.write \
+                    .format("bigquery") \
+                    .option("table", localisation_table) \
+                    .option("writeMethod", "direct") \
+                    .options(**bq_options) \
+                    .mode("append") \
+                    .save()
+                
+                new_loc_count = dim_localisation_df.count()
+                print(f"✅ Dim_Localisation créée et chargée ({new_loc_count} lignes)")
+            else:
+                raise
 
-        print(f"✅ Dim_Localisation chargée ({dim_localisation_df.count()} lignes)")
-
-        # Charger Dim_Competence (upsert)
+        # ============================================
+        # 4. DIM_COMPETENCE - Déduplication avant insertion
+        # ============================================
         competence_table = f"{bigquery_dataset}.Dim_Competence"
-        dim_competence_df.write \
-            .format("bigquery") \
-            .option("table", competence_table) \
-            .option("writeMethod", "direct") \
-            .options(**bq_options) \
-            .mode("append") \
-            .save()
-
-        print(f"✅ Dim_Competence chargée ({dim_competence_df.count()} lignes)")
+        
+        try:
+            existing_competences = spark.read \
+                .format("bigquery") \
+                .option("table", competence_table) \
+                .load() \
+                .select("competence_id") \
+                .distinct()
+            
+            new_competences = dim_competence_df.join(
+                existing_competences,
+                on="competence_id",
+                how="left_anti"
+            )
+            
+            new_comp_count = new_competences.count()
+            
+            if new_comp_count > 0:
+                new_competences.write \
+                    .format("bigquery") \
+                    .option("table", competence_table) \
+                    .option("writeMethod", "direct") \
+                    .options(**bq_options) \
+                    .mode("append") \
+                    .save()
+                
+                print(f"✅ Dim_Competence chargée ({new_comp_count} nouvelles lignes)")
+            else:
+                print(f"ℹ️ Aucune nouvelle compétence à insérer")
+        
+        except Exception as e:
+            if "Not found: Table" in str(e) or "404" in str(e):
+                dim_competence_df.write \
+                    .format("bigquery") \
+                    .option("table", competence_table) \
+                    .option("writeMethod", "direct") \
+                    .options(**bq_options) \
+                    .mode("append") \
+                    .save()
+                
+                new_comp_count = dim_competence_df.count()
+                print(f"✅ Dim_Competence créée et chargée ({new_comp_count} lignes)")
+            else:
+                raise
 
         return {
-            "fact_offres_count": fact_offres_df.count(),
-            "dim_entreprise_count": dim_entreprise_df.count(),
-            "dim_localisation_count": dim_localisation_df.count(),
-            "dim_competence_count": dim_competence_df.count(),
+            "fact_offres_count": new_count if 'new_count' in locals() else 0,
+            "dim_entreprise_count": new_entr_count if 'new_entr_count' in locals() else 0,
+            "dim_localisation_count": new_loc_count if 'new_loc_count' in locals() else 0,
+            "dim_competence_count": new_comp_count if 'new_comp_count' in locals() else 0,
             "status": "SUCCESS"
         }
 

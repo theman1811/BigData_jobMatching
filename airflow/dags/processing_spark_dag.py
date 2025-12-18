@@ -144,7 +144,7 @@ spark_parse_jobs = SparkSubmitOperator(
             **spark_common_kwargs["env_vars"],
             "MINIO_BUCKET": "scraped-jobs",  # bucket d'entrée
             # INPUT_PREFIX non défini = lecture directe *.html à la racine
-            "BATCH_LIMIT": "500",             # Limite à 300 fichiers par run
+            "BATCH_LIMIT": "1000",             # Limite à 300 fichiers par run
         },
     }
 )

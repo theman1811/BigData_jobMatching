@@ -16,4 +16,6 @@ RUN pip install --no-cache-dir \
     pyspark==3.5.1 \
     apache-airflow-providers-apache-spark==4.5.0 \
     apache-airflow-providers-google==10.12.0 \
-    apache-airflow-providers-docker==3.7.0
+    apache-airflow-providers-docker==3.7.0 \
+    minio==7.2.0 \
+    kafka-python==2.0.2
