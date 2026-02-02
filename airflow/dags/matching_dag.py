@@ -40,9 +40,10 @@ SPARK_CONF = {
 }
 
 SPARK_ENV_VARS = {
-    'GCP_PROJECT_ID': os.getenv('GCP_PROJECT_ID', 'bigdata-jobmatching-test'),
+    'GCP_PROJECT_ID': os.getenv('GCP_PROJECT_ID', 'noble-anvil-479619-h9'),
     'BIGQUERY_DATASET': os.getenv('BIGQUERY_DATASET', 'jobmatching_dw'),
     'MINIO_BUCKET': os.getenv('MINIO_BUCKET', 'processed-data'),
+    # Le driver Spark s'exécute dans le conteneur Airflow, donc utiliser le chemin Airflow
     'GOOGLE_APPLICATION_CREDENTIALS': '/opt/airflow/credentials/bq-service-account.json'
 }
 

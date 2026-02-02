@@ -44,8 +44,9 @@ GOOGLE_CREDS = Variable.get(
 
 def check_offers_ready(**context):
     """Valide la configuration d'entrée pour les offres avant le chargement."""
-    input_path = f"s3a://{MINIO_BUCKET}/jobs_parsed"
-    print(f"Entrée attendue pour les offres: {input_path}")
+    # Essayer d'abord jobs_enriched_sectors (avec secteurs), sinon jobs_parsed
+    input_path = f"s3a://{MINIO_BUCKET}/jobs_enriched_sectors"
+    print(f"Entrée attendue pour les offres: {input_path} (avec fallback sur jobs_parsed)")
     return input_path
 
 
@@ -90,7 +91,10 @@ load_offers_task = SparkSubmitOperator(
         'GCP_PROJECT_ID': GCP_PROJECT_ID,
         'BIGQUERY_DATASET': BIGQUERY_DATASET,
         'MINIO_BUCKET': MINIO_BUCKET,
-        'GOOGLE_APPLICATION_CREDENTIALS': GOOGLE_CREDS
+        'GOOGLE_APPLICATION_CREDENTIALS': GOOGLE_CREDS,
+        'AIRFLOW_DAG_ID': '{{ dag.dag_id }}',
+        'AIRFLOW_TASK_ID': '{{ task.task_id }}',
+        'AIRFLOW_RUN_ID': '{{ dag_run.run_id }}',
     },
     dag=dag
 )

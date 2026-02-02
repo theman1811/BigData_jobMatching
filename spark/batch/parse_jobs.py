@@ -30,6 +30,9 @@ from pyspark.sql.types import (
 from bs4 import BeautifulSoup
 import re
 
+# Import pour le logging
+from logging_utils import write_processing_log
+
 
 def create_spark_session():
     """Crée la session Spark avec configuration MinIO"""
@@ -637,6 +640,16 @@ def main():
     print(f"   Input: {input_path}")
     print(f"   Output: {output_path}")
 
+    # Variables pour le logging
+    start_time = datetime.now()
+    execution_id = os.getenv("AIRFLOW_RUN_ID", None)
+    airflow_dag_id = os.getenv("AIRFLOW_DAG_ID", None)
+    airflow_task_id = os.getenv("AIRFLOW_TASK_ID", None)
+    statut = "SUCCESS"
+    total_jobs = 0
+    error_message = None
+    error_stack_trace = None
+
     try:
         # Créer la session Spark
         spark = create_spark_session()
@@ -649,9 +662,36 @@ def main():
         print(f"📊 {total_jobs} offres parsées (qualité moyenne: {avg_quality:.2f})")
 
     except Exception as e:
+        statut = "FAILED"
+        error_message = str(e)
+        import traceback
+        error_stack_trace = traceback.format_exc()
         print(f"❌ Erreur: {e}")
         sys.exit(1)
     finally:
+        # Écrire le log dans BigQuery
+        end_time = datetime.now()
+        try:
+            if 'spark' in locals():
+                write_processing_log(
+                    spark=spark,
+                    job_name="parse_jobs",
+                    job_type="spark_batch",
+                    start_time=start_time,
+                    end_time=end_time,
+                    statut=statut,
+                    records_processed=total_jobs,
+                    records_success=total_jobs if statut == "SUCCESS" else 0,
+                    records_failed=0 if statut == "SUCCESS" else total_jobs,
+                    error_message=error_message,
+                    error_stack_trace=error_stack_trace,
+                    execution_id=execution_id,
+                    airflow_dag_id=airflow_dag_id,
+                    airflow_task_id=airflow_task_id
+                )
+        except Exception as log_error:
+            print(f"⚠️  Erreur lors de l'écriture du log: {log_error}")
+        
         if 'spark' in locals():
             spark.stop()
             print("✅ Session Spark arrêtée")

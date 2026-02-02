@@ -33,12 +33,15 @@ from pyspark.sql.window import Window
 
 import re
 
+# Import pour le logging
+from logging_utils import write_processing_log
+
 
 def create_spark_session():
     """Crée la session Spark avec configuration BigQuery et GCS"""
     spark_master = os.getenv("SPARK_MASTER", "spark://spark-master:7077")
-    # Le chemin des credentials dépend du contexte (Airflow driver vs Spark executor)
-    gcp_credentials = os.getenv("GOOGLE_APPLICATION_CREDENTIALS", "/opt/spark/credentials/bq-service-account.json")
+    # Utiliser le chemin credentials depuis la variable d'environnement
+    gcp_credentials = os.getenv("GOOGLE_APPLICATION_CREDENTIALS", "/opt/airflow/credentials/bq-service-account.json")
     
     return SparkSession.builder \
         .appName("SectorExtractor") \
@@ -47,7 +50,7 @@ def create_spark_session():
         .config("spark.sql.adaptive.coalescePartitions.enabled", "true") \
         .config("spark.hadoop.fs.gs.impl", "com.google.cloud.hadoop.fs.gcs.GoogleHadoopFileSystem") \
         .config("spark.hadoop.fs.AbstractFileSystem.gs.impl", "com.google.cloud.hadoop.fs.gcs.GoogleHadoopFS") \
-        .config("spark.hadoop.google.cloud.auth.service.account.json.keyfile", "/opt/spark/credentials/bq-service-account.json") \
+        .config("spark.hadoop.google.cloud.auth.service.account.json.keyfile", gcp_credentials) \
         .config("spark.hadoop.google.cloud.auth.service.account.enable", "true") \
         .config("spark.jars.packages",
                 "com.google.cloud.spark:spark-bigquery-with-dependencies_2.12:0.32.2,"
@@ -412,35 +415,91 @@ def process_sector_extraction(spark, input_path, bigquery_dataset, gcp_project_i
     dim_secteur_df = classified_df \
         .select("secteur_id", "secteur_nom", "categorie_parent") \
         .distinct() \
+        .withColumn("nom_secteur", col("secteur_nom")) \
         .withColumn("description",
                    when(col("secteur_id") == "SECT_INCONNU", "Secteur non classifié")
                    .otherwise(concat_ws(" - ", col("secteur_nom"), col("categorie_parent")))) \
         .withColumn("created_at", current_timestamp()) \
         .filter(col("secteur_id").isNotNull()) \
-        .dropDuplicates(["secteur_id"])
+        .dropDuplicates(["secteur_id"]) \
+        .select("secteur_id", "nom_secteur", "categorie_parent", "description", "created_at")
 
     print(f"✅ {dim_secteur_df.count()} secteurs uniques identifiés")
 
-    # Étape 4: Charger Dim_Secteur dans BigQuery (optionnel, non bloquant)
+    # Étape 4: Charger Dim_Secteur dans BigQuery avec déduplication
+    gcp_credentials = os.getenv("GOOGLE_APPLICATION_CREDENTIALS", "/opt/airflow/credentials/bq-service-account.json")
     bq_options = {
         "project": gcp_project_id,
         "dataset": bigquery_dataset,
-        "temporaryGcsBucket": f"{gcp_project_id}-temp-spark-bq"
+        "temporaryGcsBucket": f"{gcp_project_id}-temp-spark-bq",
+        "allowFieldAddition": "true",
+        "allowSchemaEvolution": "true",
+        "credentialsFile": gcp_credentials
     }
 
     bq_success = False
     try:
         secteur_table = f"{bigquery_dataset}.Dim_Secteur"
-
-        dim_secteur_df.write \
-            .format("bigquery") \
-            .option("table", secteur_table) \
-            .options(**bq_options) \
-            .mode("append") \
-            .save()
-
-        print(f"✅ Dim_Secteur chargée dans BigQuery ({dim_secteur_df.count()} secteurs)")
-        bq_success = True
+        
+        print(f"📊 Vérification des secteurs existants dans {secteur_table}...")
+        
+        try:
+            # Lire les secteur_id existants depuis BigQuery
+            existing_secteurs = spark.read \
+                .format("bigquery") \
+                .option("table", secteur_table) \
+                .load() \
+                .select("secteur_id") \
+                .distinct()
+            
+            existing_count = existing_secteurs.count()
+            print(f"✅ {existing_count} secteurs existants trouvés dans BigQuery")
+            
+            # Filtrer pour ne garder que les nouveaux secteurs (LEFT ANTI JOIN)
+            new_secteurs = dim_secteur_df.join(
+                existing_secteurs,
+                on="secteur_id",
+                how="left_anti"
+            )
+            
+            new_count = new_secteurs.count()
+            total_count = dim_secteur_df.count()
+            
+            print(f"📈 {new_count} nouveaux secteurs à insérer (sur {total_count} au total)")
+            
+            if new_count > 0:
+                # Insérer uniquement les nouveaux secteurs
+                new_secteurs.write \
+                    .format("bigquery") \
+                    .option("table", secteur_table) \
+                    .option("writeMethod", "direct") \
+                    .options(**bq_options) \
+                    .mode("append") \
+                    .save()
+                
+                print(f"✅ Dim_Secteur chargée dans BigQuery ({new_count} nouveaux secteurs)")
+            else:
+                print(f"ℹ️ Aucun nouveau secteur à insérer (tous existent déjà)")
+            
+            bq_success = True
+        
+        except Exception as e:
+            # Si la table n'existe pas encore, insérer tous les secteurs
+            if "Not found: Table" in str(e) or "404" in str(e):
+                print(f"⚠️ Table {secteur_table} n'existe pas encore, création...")
+                dim_secteur_df.write \
+                    .format("bigquery") \
+                    .option("table", secteur_table) \
+                    .option("writeMethod", "direct") \
+                    .options(**bq_options) \
+                    .mode("append") \
+                    .save()
+                
+                new_count = dim_secteur_df.count()
+                print(f"✅ Dim_Secteur créée et chargée ({new_count} secteurs)")
+                bq_success = True
+            else:
+                raise
 
     except Exception as e:
         print(f"⚠️  Erreur chargement Dim_Secteur dans BigQuery (non bloquant): {e}")
@@ -493,7 +552,7 @@ def process_sector_extraction(spark, input_path, bigquery_dataset, gcp_project_i
 
     print("📊 Statistiques finales:")
     print(f"   Offres classifiées: {classified_count}/{total_jobs}")
-    print(".1f")
+    print(f"   Confiance moyenne: {avg_confidence:.1f}%")
     print(f"   Haute confiance (>70%): {high_confidence_count}")
 
     return {
@@ -524,6 +583,16 @@ def main():
     print(f"   GCP Project: {gcp_project_id}")
     print(f"   BigQuery Dataset: {bigquery_dataset}")
 
+    # Variables pour le logging
+    start_time = datetime.now()
+    execution_id = os.getenv("AIRFLOW_RUN_ID", None)
+    airflow_dag_id = os.getenv("AIRFLOW_DAG_ID", None)
+    airflow_task_id = os.getenv("AIRFLOW_TASK_ID", None)
+    statut = "SUCCESS"
+    records_processed = 0
+    error_message = None
+    error_stack_trace = None
+
     try:
         # Créer la session Spark
         spark = create_spark_session()
@@ -533,21 +602,51 @@ def main():
         result = process_sector_extraction(spark, input_path, bigquery_dataset, gcp_project_id)
 
         if result["status"] == "SUCCESS":
+            statut = "SUCCESS"
+            records_processed = result.get("total_jobs", 0)
             print("✅ Extraction des secteurs terminée avec succès")
             print("📊 Statistiques:")
             for key, value in result.items():
                 if key != "status":
                     print(f"   {key}: {value}")
         else:
-            print(f"❌ Échec de l'extraction: {result.get('error', 'Erreur inconnue')}")
+            statut = "FAILED"
+            error_message = result.get("error", "Échec de l'extraction")
+            print(f"❌ Échec de l'extraction: {error_message}")
             sys.exit(1)
 
     except Exception as e:
-        print(f"❌ Erreur: {e}")
+        statut = "FAILED"
+        error_message = str(e)
         import traceback
+        error_stack_trace = traceback.format_exc()
+        print(f"❌ Erreur: {e}")
         traceback.print_exc()
         sys.exit(1)
     finally:
+        # Écrire le log dans BigQuery
+        end_time = datetime.now()
+        try:
+            if 'spark' in locals():
+                write_processing_log(
+                    spark=spark,
+                    job_name="extract_sectors",
+                    job_type="spark_batch",
+                    start_time=start_time,
+                    end_time=end_time,
+                    statut=statut,
+                    records_processed=records_processed,
+                    records_success=records_processed if statut == "SUCCESS" else 0,
+                    records_failed=0 if statut == "SUCCESS" else records_processed,
+                    error_message=error_message,
+                    error_stack_trace=error_stack_trace,
+                    execution_id=execution_id,
+                    airflow_dag_id=airflow_dag_id,
+                    airflow_task_id=airflow_task_id
+                )
+        except Exception as log_error:
+            print(f"⚠️  Erreur lors de l'écriture du log: {log_error}")
+        
         if 'spark' in locals():
             spark.stop()
             print("✅ Session Spark arrêtée")

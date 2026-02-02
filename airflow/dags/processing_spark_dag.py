@@ -63,9 +63,10 @@ SPARK_CONF = {
 }
 
 SPARK_ENV_VARS = {
-    'GCP_PROJECT_ID': 'bigdata-jobmatching-test',
+    'GCP_PROJECT_ID': os.getenv('GCP_PROJECT_ID', 'noble-anvil-479619-h9'),
     'BIGQUERY_DATASET': 'jobmatching_dw',
     'MINIO_BUCKET': 'processed-data',
+    # Le driver Spark s'exécute dans le conteneur Airflow, donc utiliser le chemin Airflow
     'GOOGLE_APPLICATION_CREDENTIALS': '/opt/airflow/credentials/bq-service-account.json'
 }
 
@@ -109,12 +110,14 @@ def check_processing_quality(**context):
 # ============================================
 
 # Paramètres communs pour SparkSubmitOperator
+# Les variables Airflow seront passées via les macros dans chaque tâche
 spark_common_kwargs = {
     "conn_id": "spark_default",
     "conf": SPARK_CONF,
     "env_vars": {
         **SPARK_ENV_VARS,
         'SPARK_MASTER': 'spark://spark-master:7077',  # Force le master via env var
+        'AIRFLOW_DAG_ID': '{{ dag.dag_id }}',
     },
     "dag": dag,
 }
@@ -142,6 +145,8 @@ spark_parse_jobs = SparkSubmitOperator(
         **spark_common_kwargs,
         "env_vars": {
             **spark_common_kwargs["env_vars"],
+            "AIRFLOW_TASK_ID": "{{ task.task_id }}",
+            "AIRFLOW_RUN_ID": "{{ dag_run.run_id }}",
             "MINIO_BUCKET": "scraped-jobs",  # bucket d'entrée
             # INPUT_PREFIX non défini = lecture directe *.html à la racine
             "BATCH_LIMIT": "1000",             # Limite à 300 fichiers par run
@@ -153,14 +158,28 @@ spark_parse_jobs = SparkSubmitOperator(
 spark_extract_skills = SparkSubmitOperator(
     task_id='spark_extract_skills',
     application=f"{SPARK_APP_PATH}/extract_skills.py",
-    **spark_common_kwargs
+    **{
+        **spark_common_kwargs,
+        "env_vars": {
+            **spark_common_kwargs["env_vars"],
+            "AIRFLOW_TASK_ID": "{{ task.task_id }}",
+            "AIRFLOW_RUN_ID": "{{ dag_run.run_id }}",
+        },
+    }
 )
 
 # 3. Extraction des salaires
 spark_extract_salary = SparkSubmitOperator(
     task_id='spark_extract_salary',
     application=f"{SPARK_APP_PATH}/extract_salary.py",
-    **spark_common_kwargs
+    **{
+        **spark_common_kwargs,
+        "env_vars": {
+            **spark_common_kwargs["env_vars"],
+            "AIRFLOW_TASK_ID": "{{ task.task_id }}",
+            "AIRFLOW_RUN_ID": "{{ dag_run.run_id }}",
+        },
+    }
 )
 
 # 4. Déduplication (DÉSACTIVÉE - données d'entrée trop génériques)
@@ -174,7 +193,14 @@ spark_extract_salary = SparkSubmitOperator(
 spark_extract_sectors = SparkSubmitOperator(
     task_id='spark_extract_sectors',
     application=f"{SPARK_APP_PATH}/extract_sectors.py",
-    **spark_common_kwargs
+    **{
+        **spark_common_kwargs,
+        "env_vars": {
+            **spark_common_kwargs["env_vars"],
+            "AIRFLOW_TASK_ID": "{{ task.task_id }}",
+            "AIRFLOW_RUN_ID": "{{ dag_run.run_id }}",
+        },
+    }
 )
 
 # ============================================

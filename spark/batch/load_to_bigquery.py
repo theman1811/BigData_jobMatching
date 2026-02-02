@@ -25,6 +25,9 @@ from pyspark.sql.types import (
 )
 from pyspark.sql.window import Window
 
+# Import pour le logging
+from logging_utils import write_processing_log
+
 
 def create_spark_session():
     """Crée la session Spark avec configuration BigQuery"""
@@ -136,18 +139,26 @@ def process_bigquery_load(spark, input_path, bigquery_dataset, gcp_project_id):
 
     Args:
         spark: SparkSession
-        input_path: Chemin MinIO source
+        input_path: Chemin MinIO source (peut être jobs_parsed ou jobs_enriched_sectors)
         bigquery_dataset: Dataset BigQuery
         gcp_project_id: Projet GCP
     """
 
     print(f"📖 Lecture des données depuis {input_path}")
 
-    # Lire les données parsées
-    jobs_df = spark.read.parquet(input_path)
-    total_jobs = jobs_df.count()
-
-    print(f"✅ {total_jobs} offres lues depuis MinIO")
+    # Lire les données parsées (ou enrichies avec secteurs)
+    try:
+        jobs_df = spark.read.parquet(input_path)
+        total_jobs = jobs_df.count()
+        print(f"✅ {total_jobs} offres lues depuis MinIO")
+    except Exception as e:
+        print(f"⚠️ Erreur lecture depuis {input_path}: {e}")
+        # Fallback sur jobs_parsed si jobs_enriched_sectors n'existe pas
+        fallback_path = input_path.replace("jobs_enriched_sectors", "jobs_parsed")
+        print(f"🔄 Tentative avec chemin de secours: {fallback_path}")
+        jobs_df = spark.read.parquet(fallback_path)
+        total_jobs = jobs_df.count()
+        print(f"✅ {total_jobs} offres lues depuis chemin de secours")
 
     # Enregistrer les UDFs
     spark.udf.register("generate_entreprise_id", generate_entreprise_id, StringType())
@@ -164,7 +175,7 @@ def process_bigquery_load(spark, input_path, bigquery_dataset, gcp_project_id):
     # ============================================
 
     # Transformer les données pour Fact_OffresEmploi
-    # IMPORTANT: Sélectionner uniquement les colonnes correspondant au schéma BigQuery
+    # IMPORTANT: Utiliser secteur_id depuis les données si disponible, sinon SECT_INCONNU
     fact_offres_df = jobs_df \
         .withColumn("offre_id", col("job_id")) \
         .withColumn("titre_poste", trim(col("title"))) \
@@ -172,7 +183,8 @@ def process_bigquery_load(spark, input_path, bigquery_dataset, gcp_project_id):
                    expr("generate_entreprise_id(company)")) \
         .withColumn("localisation_id",
                    expr("generate_localisation_id(location)")) \
-        .withColumn("secteur_id", lit("SECT_INCONNU")) \
+        .withColumn("secteur_id", 
+                   coalesce(col("secteur_id"), lit("SECT_INCONNU"))) \
         .withColumn("type_contrat", col("contract_type")) \
         .withColumn("niveau_experience",
                    expr("infer_experience_level(title, description)")) \
@@ -562,12 +574,23 @@ def main():
     bigquery_dataset = os.getenv("BIGQUERY_DATASET", "jobmatching_dw")
     minio_bucket = os.getenv("MINIO_BUCKET", "processed-data")
 
-    input_path = f"s3a://{minio_bucket}/jobs_parsed"
+    # Essayer d'abord jobs_enriched_sectors (avec secteurs), sinon jobs_parsed
+    input_path = f"s3a://{minio_bucket}/jobs_enriched_sectors"
 
     print(f"📋 Configuration:")
     print(f"   GCP Project: {gcp_project_id}")
     print(f"   BigQuery Dataset: {bigquery_dataset}")
-    print(f"   Input Path: {input_path}")
+    print(f"   Input Path: {input_path} (avec fallback sur jobs_parsed)")
+
+    # Variables pour le logging
+    start_time = datetime.now()
+    execution_id = os.getenv("AIRFLOW_RUN_ID", None)
+    airflow_dag_id = os.getenv("AIRFLOW_DAG_ID", None)
+    airflow_task_id = os.getenv("AIRFLOW_TASK_ID", None)
+    statut = "SUCCESS"
+    records_processed = 0
+    error_message = None
+    error_stack_trace = None
 
     try:
         # Créer la session Spark
@@ -578,21 +601,51 @@ def main():
         result = process_bigquery_load(spark, input_path, bigquery_dataset, gcp_project_id)
 
         if result["status"] == "SUCCESS":
+            statut = "SUCCESS"
+            records_processed = result.get("fact_offres_count", 0)
             print("✅ Chargement BigQuery terminé avec succès")
             print("📊 Statistiques:")
             for key, value in result.items():
                 if key != "status":
                     print(f"   {key}: {value}")
         else:
-            print(f"❌ Échec du chargement: {result.get('error', 'Erreur inconnue')}")
+            statut = "FAILED"
+            error_message = result.get("error", "Échec du chargement")
+            print(f"❌ Échec du chargement: {error_message}")
             sys.exit(1)
 
     except Exception as e:
-        print(f"❌ Erreur: {e}")
+        statut = "FAILED"
+        error_message = str(e)
         import traceback
+        error_stack_trace = traceback.format_exc()
+        print(f"❌ Erreur: {e}")
         traceback.print_exc()
         sys.exit(1)
     finally:
+        # Écrire le log dans BigQuery
+        end_time = datetime.now()
+        try:
+            if 'spark' in locals():
+                write_processing_log(
+                    spark=spark,
+                    job_name="load_to_bigquery",
+                    job_type="spark_batch",
+                    start_time=start_time,
+                    end_time=end_time,
+                    statut=statut,
+                    records_processed=records_processed,
+                    records_success=records_processed if statut == "SUCCESS" else 0,
+                    records_failed=0 if statut == "SUCCESS" else records_processed,
+                    error_message=error_message,
+                    error_stack_trace=error_stack_trace,
+                    execution_id=execution_id,
+                    airflow_dag_id=airflow_dag_id,
+                    airflow_task_id=airflow_task_id
+                )
+        except Exception as log_error:
+            print(f"⚠️  Erreur lors de l'écriture du log: {log_error}")
+        
         if 'spark' in locals():
             spark.stop()
             print("✅ Session Spark arrêtée")

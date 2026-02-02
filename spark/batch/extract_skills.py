@@ -34,6 +34,9 @@ from pyspark.sql.window import Window
 # Imports NLP - spaCy sera chargé dans les UDFs
 import re
 
+# Import pour le logging
+from logging_utils import write_processing_log
+
 
 def create_spark_session():
     """Crée la session Spark avec configuration MinIO"""
@@ -433,6 +436,16 @@ def main():
     print(f"   Input: {input_path}")
     print(f"   Output: {output_path}")
 
+    # Variables pour le logging
+    start_time = datetime.now()
+    execution_id = os.getenv("AIRFLOW_RUN_ID", None)
+    airflow_dag_id = os.getenv("AIRFLOW_DAG_ID", None)
+    airflow_task_id = os.getenv("AIRFLOW_TASK_ID", None)
+    statut = "SUCCESS"
+    records_processed = 0
+    error_message = None
+    error_stack_trace = None
+
     try:
         # Créer la session Spark
         spark = create_spark_session()
@@ -442,21 +455,51 @@ def main():
         result = process_skills_extraction(spark, input_path, output_path)
 
         if result["status"] == "SUCCESS":
+            statut = "SUCCESS"
+            records_processed = result.get("total_jobs", 0)
             print("✅ Extraction de compétences terminée avec succès")
             print("📊 Statistiques:")
             for key, value in result.items():
                 if key != "status":
                     print(f"   {key}: {value}")
         else:
+            statut = "FAILED"
+            error_message = result.get("error", "Échec de l'extraction")
             print("❌ Échec de l'extraction de compétences")
             sys.exit(1)
 
     except Exception as e:
-        print(f"❌ Erreur: {e}")
+        statut = "FAILED"
+        error_message = str(e)
         import traceback
+        error_stack_trace = traceback.format_exc()
+        print(f"❌ Erreur: {e}")
         traceback.print_exc()
         sys.exit(1)
     finally:
+        # Écrire le log dans BigQuery
+        end_time = datetime.now()
+        try:
+            if 'spark' in locals():
+                write_processing_log(
+                    spark=spark,
+                    job_name="extract_skills",
+                    job_type="spark_batch",
+                    start_time=start_time,
+                    end_time=end_time,
+                    statut=statut,
+                    records_processed=records_processed,
+                    records_success=records_processed if statut == "SUCCESS" else 0,
+                    records_failed=0 if statut == "SUCCESS" else records_processed,
+                    error_message=error_message,
+                    error_stack_trace=error_stack_trace,
+                    execution_id=execution_id,
+                    airflow_dag_id=airflow_dag_id,
+                    airflow_task_id=airflow_task_id
+                )
+        except Exception as log_error:
+            print(f"⚠️  Erreur lors de l'écriture du log: {log_error}")
+        
         if 'spark' in locals():
             spark.stop()
             print("✅ Session Spark arrêtée")
